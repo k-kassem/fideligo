@@ -1,0 +1,546 @@
+<div class="min-h-screen bg-gray-50" *ngIf="restaurant; else noRestaurant">
+  <!-- Header -->
+  <header class="bg-white shadow-sm border-b">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex justify-between items-center h-16">
+        <div class="flex items-center space-x-3">
+          <div class="bg-orange-500 p-2 rounded-lg">
+            <svg class="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 class="text-xl font-bold text-gray-900">{{ restaurant.name }}</h1>
+            <p class="text-sm text-gray-500">Espace Restaurant</p>
+          </div>
+        </div>
+        <button
+          class="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          (click)="logout()"
+        >
+          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+          </svg>
+          <span>Déconnexion</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div *ngIf="error" class="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+      <p class="text-red-800">{{ error }}</p>
+    </div>
+
+    <div *ngIf="success" class="mb-4 p-4 bg-green-50 border border-green-200 rounded-md">
+      <p class="text-green-800">{{ success }}</p>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+      <div class="bg-white p-6 rounded-lg shadow-sm border">
+        <div class="flex items-center">
+          <div class="bg-blue-100 p-3 rounded-lg">
+            <svg class="h-8 w-8 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-600">Clients</p>
+            <p class="text-2xl font-bold text-gray-900">{{ clients.length }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-sm border">
+        <div class="flex items-center">
+          <div class="bg-green-100 p-3 rounded-lg">
+            <svg class="h-8 w-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-600">Achats</p>
+            <p class="text-2xl font-bold text-gray-900">{{ purchases.length }}</p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-sm border">
+        <div class="flex items-center">
+          <div class="bg-purple-100 p-3 rounded-lg">
+            <svg class="h-8 w-8 text-purple-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-600">Points distribués</p>
+            <p class="text-2xl font-bold text-gray-900">
+              {{ getTotalPointsEarned() }}
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="bg-white p-6 rounded-lg shadow-sm border">
+        <div class="flex items-center">
+          <div class="bg-orange-100 p-3 rounded-lg">
+            <svg class="h-8 w-8 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
+            </svg>
+          </div>
+          <div class="ml-4">
+            <p class="text-sm text-gray-600">Souscription</p>
+            <div *ngIf="restaurant.subscriptionEndDate; else unlimitedSubscription">
+              <p class="text-lg font-bold" [class]="isSubscriptionExpired(restaurant.subscriptionEndDate) ? 'text-red-600' : 'text-green-600'">
+                {{ restaurant.subscriptionEndDate | date:'shortDate' }}
+              </p>
+              <p class="text-xs" [class]="isSubscriptionExpired(restaurant.subscriptionEndDate) ? 'text-red-500' : 'text-green-500'">
+                {{ isSubscriptionExpired(restaurant.subscriptionEndDate) ? 'Expirée' : 'Active' }}
+              </p>
+            </div>
+            <ng-template #unlimitedSubscription>
+              <p class="text-lg font-bold text-gray-600">Illimitée</p>
+              <p class="text-xs text-gray-500">Aucune limite</p>
+            </ng-template>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="bg-white rounded-lg shadow-sm border">
+      <div class="border-b border-gray-200">
+        <nav class="-mb-px flex space-x-8 px-6" aria-label="Tabs">
+          <button
+            [class.border-orange-500]="activeTab === 'clients'"
+            [class.text-orange-600]="activeTab === 'clients'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            (click)="setActiveTab('clients')"
+          >
+            <svg class="h-4 w-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            Clients
+          </button>
+          <button
+            [class.border-orange-500]="activeTab === 'purchases'"
+            [class.text-orange-600]="activeTab === 'purchases'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            (click)="setActiveTab('purchases')"
+          >
+            <svg class="h-4 w-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+            </svg>
+            Achats
+          </button>
+          <button
+            [class.border-orange-500]="activeTab === 'points'"
+            [class.text-orange-600]="activeTab === 'points'"
+            class="whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300"
+            (click)="setActiveTab('points')"
+          >
+            <svg class="h-4 w-4 mr-2 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+            Attribuer Points
+          </button>
+        </nav>
+      </div>
+
+      <div class="p-6">
+        <!-- Clients Tab -->
+        <div *ngIf="activeTab === 'clients'">
+          <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-semibold flex items-center">
+              <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+              </svg>
+              Liste des Clients
+            </h2>
+            <button
+              class="bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md flex items-center"
+              (click)="isClientDialogOpen = true"
+            >
+              <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+              </svg>
+              Nouveau Client
+            </button>
+          </div>
+
+          <div *ngIf="clients.length === 0" class="text-center py-12 text-gray-500">
+            <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z"></path>
+            </svg>
+            <p>Aucun client enregistré</p>
+          </div>
+
+          <div *ngIf="clients.length > 0" class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nom</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Téléphone</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Région</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                  <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr *ngFor="let client of clients">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {{ client.firstName }} {{ client.lastName }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ client.email }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ client.phone || '-' }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ client.region || '-' }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap">
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+                      <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z"></path>
+                      </svg>
+                      {{ getClientPoints(client.id) }} pts
+                    </span>
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <button
+                      (click)="startEditClient(client)"
+                      class="text-blue-600 hover:text-blue-900"
+                      title="Modifier"
+                    >
+                      <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                      </svg>
+                    </button>
+                  </td>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Purchases Tab -->
+        <div *ngIf="activeTab === 'purchases'">
+          <h2 class="text-lg font-semibold flex items-center mb-6">
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+            </svg>
+            Historique des Achats
+          </h2>
+
+          <div *ngIf="purchases.length === 0" class="text-center py-12 text-gray-500">
+            <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+            </svg>
+            <p>Aucun achat enregistré</p>
+          </div>
+
+          <div *ngIf="purchases.length > 0" class="overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200">
+              <thead class="bg-gray-50">
+                <tr>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points Gagnés</th>
+                  <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points Utilisés</th>
+                </tr>
+              </thead>
+              <tbody class="bg-white divide-y divide-gray-200">
+                <tr *ngFor="let purchase of purchases.slice().reverse()">
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {{ purchase.date | date:'dd/MM/yyyy' }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                    {{ getClientName(purchase.clientId) }}
+                  </td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.description }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.amount | number:'1.2-2' }} €</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-medium">+{{ purchase.pointsEarned }}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-sm">
+                    <span *ngIf="purchase.pointsUsed > 0" class="text-red-600 font-medium">-${{ purchase.pointsUsed }}</span>
+                    <span *ngIf="purchase.pointsUsed === 0">-</span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Points Tab -->
+        <div *ngIf="activeTab === 'points'">
+          <h2 class="text-lg font-semibold flex items-center mb-6">
+            <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+            </svg>
+            Attribuer des Points
+          </h2>
+
+          <div class="space-y-6">
+            <!-- Search Client -->
+            <div class="bg-gray-50 p-4 rounded-lg">
+              <label class="block mb-2 text-sm font-medium text-gray-700">Rechercher un client par email</label>
+              <div class="flex space-x-2">
+                <input
+                  type="email"
+                  placeholder="client@email.com"
+                  [(ngModel)]="searchEmail"
+                  class="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <button
+                  (click)="searchClient()"
+                  class="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 flex items-center"
+                >
+                  <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                  </svg>
+                  Rechercher
+                </button>
+              </div>
+            </div>
+
+            <div *ngIf="selectedClient" class="border rounded-lg p-4 space-y-4">
+              <div class="flex justify-between items-start">
+                <div>
+                  <h3 class="font-semibold text-lg">
+                    {{ selectedClient.firstName }} {{ selectedClient.lastName }}
+                  </h3>
+                  <p class="text-gray-600">{{ selectedClient.email }}</p>
+                  <div class="mt-2 p-3 bg-orange-50 rounded-lg border border-orange-200">
+                    <div class="flex justify-between items-center">
+                      <span class="text-sm font-medium text-orange-800">Points disponibles:</span>
+                      <span class="text-lg font-bold text-orange-600">{{ getClientPoints(selectedClient.id) }} pts</span>
+                    </div>
+                    <div class="flex justify-between items-center mt-1">
+                      <span class="text-sm text-orange-700">Équivalent:</span>
+                      <span class="text-sm font-medium text-orange-600">{{ pointsToEuros(getClientPoints(selectedClient.id)) | number:'1.2-2' }} €</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <form (ngSubmit)="handleAddPoints()" class="space-y-4 pt-4 border-t">
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label for="amount" class="block text-sm font-medium text-gray-700">Montant de l'achat (€)</label>
+                    <input
+                      id="amount"
+                      type="number"
+                      step="0.01"
+                      [(ngModel)]="purchaseAmount"
+                      name="purchaseAmount"
+                      placeholder="25.50"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                  <div class="space-y-2">
+                    <label for="description" class="block text-sm font-medium text-gray-700">Description</label>
+                    <input
+                      id="description"
+                      type="text"
+                      [(ngModel)]="purchaseDescription"
+                      name="purchaseDescription"
+                      placeholder="Menu du jour"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                  </div>
+                </div>
+
+                <!-- Section utilisation des points -->
+                <div class="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <h4 class="text-sm font-medium text-blue-800 mb-3">Utilisation des points de fidélité</h4>
+                  <div class="grid grid-cols-2 gap-4 mb-3">
+                    <div class="space-y-2">
+                      <label for="pointsUse" class="block text-sm font-medium text-gray-700">Points à utiliser</label>
+                      <input
+                        id="pointsUse"
+                        type="number"
+                        [(ngModel)]="pointsToUse"
+                        name="pointsUse"
+                        placeholder="0"
+                        class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <p class="text-xs text-gray-500">Équivalent: {{ pointsToEuros(parseIntValue(pointsToUse)) | number:'1.2-2' }} €</p>
+                    </div>
+                    <div class="space-y-2">
+                      <label class="block text-sm font-medium text-gray-700">Montant restant à payer</label>
+                      <div class="px-3 py-2 bg-white border border-gray-300 rounded-md text-lg font-bold text-green-600">
+                        {{ getRemainingAmount() | number:'1.2-2' }} €
+                      </div>
+                      <p class="text-xs text-gray-500">Après déduction des points</p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    (click)="useMaxPoints()"
+                    class="w-full bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded-md text-sm flex items-center justify-center"
+                  >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                    </svg>
+                    Utiliser le maximum de points
+                  </button>
+                </div>
+
+                <div class="grid grid-cols-1 gap-4">
+                  <div class="space-y-2">
+                    <label for="pointsAdd" class="block text-sm font-medium text-gray-700">Points à ajouter (bonus fidélité)</label>
+                    <input
+                      id="pointsAdd"
+                      type="number"
+                      [(ngModel)]="pointsToAdd"
+                      name="pointsToAdd"
+                      placeholder="10"
+                      class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <p class="text-xs text-gray-500">Points bonus à créditer sur le compte fidélité du client</p>
+                  </div>
+
+                  <button
+                    type="submit"
+                    class="w-full bg-orange-500 hover:bg-orange-600 text-white px-4 py-2 rounded-md flex items-center justify-center"
+                  >
+                    <svg class="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                    </svg>
+                    Enregistrer l'achat et les points
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <div *ngIf="!selectedClient" class="text-center py-8 text-gray-500">
+              <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1"></path>
+              </svg>
+              <p>Recherchez un client pour attribuer des points</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Client Creation Modal -->
+  <div *ngIf="isClientDialogOpen" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50" (click)="isClientDialogOpen = false">
+    <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white" (click)="$event.stopPropagation()">
+      <div class="mt-3">
+        <h3 class="text-lg font-medium text-gray-900 mb-4">{{ isEditMode ? 'Modifier le Client' : 'Créer un nouveau Client' }}</h3>
+        <p class="text-sm text-gray-500 mb-4">{{ isEditMode ? 'Modifiez les informations du client.' : 'Remplissez les informations pour créer un compte client.' }}</p>
+
+        <form (ngSubmit)="onSubmitClient()">
+          <div class="space-y-4">
+            <div class="grid grid-cols-2 gap-4">
+              <div class="space-y-2">
+                <label for="firstName" class="block text-sm font-medium text-gray-700">Prénom *</label>
+                <input
+                  id="firstName"
+                  type="text"
+                  [(ngModel)]="clientFirstName"
+                  name="clientFirstName"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+              <div class="space-y-2">
+                <label for="lastName" class="block text-sm font-medium text-gray-700">Nom *</label>
+                <input
+                  id="lastName"
+                  type="text"
+                  [(ngModel)]="clientLastName"
+                  name="clientLastName"
+                  required
+                  class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+              </div>
+            </div>
+
+            <div class="space-y-2">
+              <label for="clientEmail" class="block text-sm font-medium text-gray-700">Email *</label>
+              <input
+                id="clientEmail"
+                type="email"
+                [(ngModel)]="clientEmail"
+                name="clientEmail"
+                required
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <label for="clientPassword" class="block text-sm font-medium text-gray-700">Mot de passe {{ isEditMode ? '(laisser vide pour conserver l\'actuel)' : '*' }}</label>
+              <input
+                id="clientPassword"
+                type="password"
+                [(ngModel)]="clientPassword"
+                name="clientPassword"
+                [required]="!isEditMode"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <label for="clientPhone" class="block text-sm font-medium text-gray-700">Téléphone</label>
+              <input
+                id="clientPhone"
+                type="tel"
+                [(ngModel)]="clientPhone"
+                name="clientPhone"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+            </div>
+
+            <div class="space-y-2">
+              <label for="clientRegion" class="block text-sm font-medium text-gray-700">Région</label>
+              <select
+                id="clientRegion"
+                [(ngModel)]="clientRegion"
+                name="clientRegion"
+                class="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Sélectionner une région</option>
+                <option value="Île-de-France">Île-de-France</option>
+                <option value="Auvergne-Rhône-Alpes">Auvergne-Rhône-Alpes</option>
+                <option value="Bourgogne-Franche-Comté">Bourgogne-Franche-Comté</option>
+                <option value="Bretagne">Bretagne</option>
+                <option value="Centre-Val de Loire">Centre-Val de Loire</option>
+                <option value="Corse">Corse</option>
+                <option value="Grand Est">Grand Est</option>
+                <option value="Hauts-de-France">Hauts-de-France</option>
+                <option value="Normandie">Normandie</option>
+                <option value="Nouvelle-Aquitaine">Nouvelle-Aquitaine</option>
+                <option value="Occitanie">Occitanie</option>
+                <option value="Pays de la Loire">Pays de la Loire</option>
+                <option value="Provence-Alpes-Côte d'Azur">Provence-Alpes-Côte d'Azur</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex justify-end space-x-3 mt-6">
+            <button
+              type="button"
+              (click)="cancelEdit()"
+              class="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 border border-gray-300 rounded-md hover:bg-gray-200"
+            >
+              Annuler
+            </button>
+            <button
+              type="submit"
+              class="px-4 py-2 text-sm font-medium text-white bg-orange-500 border border-transparent rounded-md hover:bg-orange-600"
+            >
+              {{ isEditMode ? 'Modifier le Client' : 'Créer le Client' }}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<ng-template #noRestaurant>
+  <div class="min-h-screen flex items-center justify-center">
+    <div class="p-4 bg-red-50 border border-red-200 rounded-md">
+      <p class="text-red-800">Restaurant non trouvé</p>
+    </div>
+  </div>
+</ng-template>

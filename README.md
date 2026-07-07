@@ -1,14 +1,33 @@
-# Loyality
+# Fidélité Restaurant
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 17.3.17.
+Système de fidélité pour restaurants permettant la gestion des clients, des achats et des points de fidélité.
 
-## Development server
+## Fonctionnalités
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+- **Authentification** : Connexion pour administrateurs, restaurants et clients
+- **Gestion des utilisateurs** : Création et gestion des comptes
+- **Gestion des restaurants** : Ajout et modification des informations restaurant
+- **Gestion des clients** : Suivi des clients par restaurant
+- **Suivi des achats** : Enregistrement des achats et calcul des points
+- **Système de points** : Attribution et utilisation des points de fidélité
 
-## Code scaffolding
+## Comptes de démonstration
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+- **Admin** : admin@fidelite.com / admin123
+
+## Technologies utilisées
+
+- Angular 17
+- TypeScript
+- Tailwind CSS
+- LocalStorage pour la persistance des données
+
+## Installation
+
+1. Cloner le projet
+2. Installer les dépendances : `npm install`
+3. Lancer le serveur de développement : `npm start`
+4. Ouvrir http://localhost:4200
 
 ## Build
 

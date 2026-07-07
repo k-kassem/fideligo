@@ -1,0 +1,74 @@
+<div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-50 p-4">
+  <div class="w-full max-w-md shadow-xl bg-white rounded-lg">
+    <div class="text-center space-y-4 p-6">
+      <div class="flex justify-center">
+        <div class="bg-orange-500 p-4 rounded-full">
+          <svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+          </svg>
+        </div>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold text-gray-900">
+          Fidélité Restaurant
+        </h1>
+        <p class="text-gray-600">
+          Connectez-vous à votre compte
+        </p>
+      </div>
+    </div>
+    <div class="p-6">
+      <form (ngSubmit)="onSubmit()" class="space-y-4">
+        <div *ngIf="error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+          <div class="flex">
+            <svg class="h-5 w-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"></path>
+            </svg>
+            <span class="ml-2">{{ error }}</span>
+          </div>
+        </div>
+
+        <div class="space-y-2">
+          <label for="email" class="block text-sm font-medium text-gray-700">Email</label>
+          <input
+            id="email"
+            type="email"
+            placeholder="votre@email.com"
+            [(ngModel)]="email"
+            name="email"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+
+        <div class="space-y-2">
+          <label for="password" class="block text-sm font-medium text-gray-700">Mot de passe</label>
+          <input
+            id="password"
+            type="password"
+            placeholder="••••••••"
+            [(ngModel)]="password"
+            name="password"
+            required
+            class="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+          />
+        </div>
+
+        <button
+          type="submit"
+          class="w-full bg-orange-500 hover:bg-orange-600 text-white font-semibold py-2 px-4 rounded-md focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:opacity-50"
+          [disabled]="isLoading"
+        >
+          {{ isLoading ? 'Connexion...' : 'Se connecter' }}
+        </button>
+      </form>
+
+      <div class="mt-6 p-4 bg-gray-50 rounded-lg text-sm text-gray-600">
+        <p class="font-semibold mb-2">Comptes de démonstration :</p>
+        <div class="space-y-1">
+        <p><span class="font-medium">Admin:</span> admin&#64;fidelite.com / admin123</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
