@@ -223,6 +223,10 @@ async function bootstrap() {
 
   app.use(cors());
   app.use(express.json());
+  app.use((_req, res, next) => {
+    res.setHeader('Content-Type', 'application/json; charset=UTF-8');
+    next();
+  });
 
   app.get('/', (_req, res) => {
     res.json({
