@@ -31,7 +31,7 @@
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
             </svg>
-            <span>DÃ©connexion</span>
+            <span>Déconnexion</span>
           </button>
         </div>
       </div>
@@ -45,7 +45,7 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-2xl font-bold mb-2">Bienvenue, {{ client.firstName }} !</h2>
-          <p class="text-orange-100">Consultez vos points de fidÃ©litÃ© et vos achats dans tous vos restaurants prÃ©fÃ©rÃ©s.</p>
+          <p class="text-orange-100">Consultez vos points de fidélité et vos achats dans tous vos restaurants préférés.</p>
         </div>
         <div class="hidden md:flex flex-col items-center">
           <button
@@ -57,7 +57,7 @@
             </svg>
             <span>Enregistrer un achat</span>
           </button>
-          <p class="text-xs text-orange-200 mt-2">Gagnez 1 point par euro dÃ©pensÃ©</p>
+          <p class="text-xs text-orange-200 mt-2">Gagnez 1 point par euro dépensé</p>
         </div>
       </div>
     </div>
@@ -98,7 +98,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm text-gray-600">Points gagnÃ©s</p>
+            <p class="text-sm text-gray-600">Points gagnés</p>
             <p class="text-2xl font-bold text-gray-900">{{ getTotalPointsEarned() }}</p>
           </div>
         </div>
@@ -111,7 +111,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm text-gray-600">Points utilisÃ©s</p>
+            <p class="text-sm text-gray-600">Points utilisés</p>
             <p class="text-2xl font-bold text-gray-900">{{ getTotalPointsUsed() }}</p>
           </div>
         </div>
@@ -166,7 +166,7 @@
                   <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                   </svg>
-                  <p>Aucun point enregistrÃ©</p>
+                  <p>Aucun point enregistré</p>
                   <p class="text-sm mt-1">
                     <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
                     pour gagner des points !
@@ -186,7 +186,7 @@
                     <div class="w-full bg-gray-200 rounded-full h-2">
                       <div class="bg-orange-500 h-2 rounded-full" [style.width.%]="Math.min((info.points / 100) * 100, 100)"></div>
                     </div>
-                    <p class="text-xs text-gray-400 mt-1">{{ info.points }}/100 pts pour une rÃ©compense</p>
+                    <p class="text-xs text-gray-400 mt-1">{{ info.points }}/100 pts pour une récompense</p>
                   </div>
                 </div>
               </div>
@@ -199,21 +199,21 @@
                   <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                   </svg>
-                  RÃ©sumÃ©
+                  Résumé
                 </h3>
               </div>
               <div class="p-6">
                 <div class="space-y-4">
                   <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span class="text-gray-600">Total dÃ©pensÃ©</span>
-                    <span class="font-bold text-lg">{{ getTotalPurchases() | number:'1.2-2' }} â‚¬</span>
+                    <span class="text-gray-600">Total dépensé</span>
+                    <span class="font-bold text-lg">{{ getTotalPurchases() | number:'1.2-2' }} €</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span class="text-gray-600">Points gagnÃ©s au total</span>
+                    <span class="text-gray-600">Points gagnés au total</span>
                     <span class="font-bold text-lg text-green-700">+{{ getTotalPointsEarned() }}</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                    <span class="text-gray-600">Points utilisÃ©s au total</span>
+                    <span class="text-gray-600">Points utilisés au total</span>
                     <span class="font-bold text-lg text-purple-700">-{{ getTotalPointsUsed() }}</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border-2 border-orange-200">
@@ -260,7 +260,7 @@
                 <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                 </svg>
-                <p>Aucun achat enregistrÃ©</p>
+                <p>Aucun achat enregistré</p>
                 <p class="text-sm mt-2">
                   <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
                 </p>
@@ -290,7 +290,7 @@
                         {{ getRestaurantName(purchase.restaurantId) }}
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.description }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ purchase.amount | number:'1.2-2' }} â‚¬</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ purchase.amount | number:'1.2-2' }} €</td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <div class="flex flex-col space-y-1">
                           <span *ngIf="purchase.pointsEarned > 0" class="text-green-600 font-medium flex items-center">
@@ -362,14 +362,14 @@
             [(ngModel)]="newPurchase.restaurantId"
             (ngModelChange)="onRestaurantChange()"
           >
-            <option value="">-- SÃ©lectionner un restaurant --</option>
+            <option value="">-- Sélectionner un restaurant --</option>
             <option *ngFor="let r of restaurants" [value]="r.id">{{ r.name }}</option>
           </select>
         </div>
 
         <!-- Montant -->
         <div>
-          <label class="block text-sm font-medium text-gray-700 mb-1">Montant (â‚¬) <span class="text-red-500">*</span></label>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Montant (€) <span class="text-red-500">*</span></label>
           <input
             type="number"
             min="0.01"
@@ -388,7 +388,7 @@
           <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-red-500">*</span></label>
           <input
             type="text"
-            placeholder="Ex : DÃ©jeuner, DÃ®ner, Menu du jour..."
+            placeholder="Ex : Déjeuner, Dîner, Menu du jour..."
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             [(ngModel)]="newPurchase.description"
           />
