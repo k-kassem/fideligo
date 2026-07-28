@@ -457,13 +457,50 @@ async function bootstrap() {
 
   app.post('/api/purchases', asyncHandler(async (req, res) => {
     const payload = req.body;
-    const purchase = { id: generateId(), ...payload, date: nowIso() };
+
+    // Calcul automatique : 1 point par euro dépensé
+    const pointsEarned = payload.pointsEarned !== undefined
+      ? payload.pointsEarned
+      : Math.floor(Number(payload.amount));
+
+    const pointsUsed = payload.pointsUsed ?? 0;
+
+    const purchase = {
+      id: generateId(),
+      clientId: payload.clientId,
+      restaurantId: payload.restaurantId,
+      amount: Number(payload.amount),
+      pointsEarned,
+      pointsUsed,
+      description: payload.description ?? '',
+      date: nowIso()
+    };
 
     await db.run(
       `INSERT INTO purchases (id, client_id, restaurant_id, amount, points_earned, points_used, description, date)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
       [purchase.id, purchase.clientId, purchase.restaurantId, purchase.amount, purchase.pointsEarned, purchase.pointsUsed, purchase.description, purchase.date]
     );
+
+    // Mise à jour du solde de points : ajout des points gagnés, retrait des points utilisés
+    const netDelta = purchase.pointsEarned - purchase.pointsUsed;
+    const existing = await db.get(
+      'SELECT points FROM points_balances WHERE client_id = ? AND restaurant_id = ? LIMIT 1',
+      [purchase.clientId, purchase.restaurantId]
+    );
+    const now = nowIso();
+    if (existing) {
+      const nextPoints = Math.max(0, existing.points + netDelta);
+      await db.run(
+        'UPDATE points_balances SET points = ?, updated_at = ? WHERE client_id = ? AND restaurant_id = ?',
+        [nextPoints, now, purchase.clientId, purchase.restaurantId]
+      );
+    } else {
+      await db.run(
+        'INSERT INTO points_balances (client_id, restaurant_id, points, updated_at) VALUES (?, ?, ?, ?)',
+        [purchase.clientId, purchase.restaurantId, Math.max(0, netDelta), now]
+      );
+    }
 
     res.status(201).json(purchase);
   }));

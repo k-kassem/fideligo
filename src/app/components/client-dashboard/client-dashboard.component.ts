@@ -1,5 +1,6 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { StorageService } from '../../services/api-storage.service';
 import { User, Client, Purchase, Restaurant } from '../../types';
@@ -12,7 +13,7 @@ interface PointsInfo {
 @Component({
   selector: 'app-client-dashboard',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, FormsModule],
   templateUrl: './client-dashboard.component.html',
   styleUrl: './client-dashboard.component.css'
 })
@@ -21,8 +22,21 @@ export class ClientDashboardComponent implements OnInit {
   client: Client | null = null;
   purchases: Purchase[] = [];
   pointsInfo: PointsInfo[] = [];
+  restaurants: Restaurant[] = [];
   restaurantNameMap: Record<string, string> = {};
   activeTab = 'overview';
+
+  // Modal state
+  showAddPurchaseModal = false;
+  addPurchaseLoading = false;
+  addPurchaseError = '';
+  newPurchase = {
+    restaurantId: '',
+    amount: null as number | null,
+    description: '',
+    usePoints: false,
+    pointsToUse: 0
+  };
 
   constructor(
     private authService: AuthService,
@@ -49,11 +63,13 @@ export class ClientDashboardComponent implements OnInit {
 
   async loadData() {
     if (this.client) {
-      this.purchases = await this.storageService.getPurchasesByClient(this.client.id);
-      this.pointsInfo = await this.storageService.getAllPointsForClient(this.client.id);
-      const restaurants = await this.storageService.getRestaurants();
-      this.restaurantNameMap = restaurants.reduce((acc, restaurant) => {
-        acc[restaurant.id] = restaurant.name;
+      [this.purchases, this.pointsInfo, this.restaurants] = await Promise.all([
+        this.storageService.getPurchasesByClient(this.client.id),
+        this.storageService.getAllPointsForClient(this.client.id),
+        this.storageService.getRestaurants()
+      ]);
+      this.restaurantNameMap = this.restaurants.reduce((acc, r) => {
+        acc[r.id] = r.name;
         return acc;
       }, {} as Record<string, string>);
     }
@@ -85,6 +101,77 @@ export class ClientDashboardComponent implements OnInit {
     );
   }
 
+  getAvailablePointsForRestaurant(restaurantId: string): number {
+    return this.pointsInfo.find(i => i.restaurant.id === restaurantId)?.points ?? 0;
+  }
+
+  getMaxPointsToUse(): number {
+    if (!this.newPurchase.restaurantId || !this.newPurchase.amount) return 0;
+    const available = this.getAvailablePointsForRestaurant(this.newPurchase.restaurantId);
+    // max : points disponibles, mais pas plus que le montant en euros
+    return Math.min(available, Math.floor(this.newPurchase.amount));
+  }
+
+  openAddPurchaseModal() {
+    this.newPurchase = { restaurantId: '', amount: null, description: '', usePoints: false, pointsToUse: 0 };
+    this.addPurchaseError = '';
+    this.showAddPurchaseModal = true;
+  }
+
+  closeAddPurchaseModal() {
+    this.showAddPurchaseModal = false;
+  }
+
+  onRestaurantChange() {
+    this.newPurchase.pointsToUse = 0;
+  }
+
+  onUsePointsChange() {
+    if (!this.newPurchase.usePoints) {
+      this.newPurchase.pointsToUse = 0;
+    }
+  }
+
+  async submitAddPurchase() {
+    if (!this.client) return;
+    if (!this.newPurchase.restaurantId) {
+      this.addPurchaseError = 'Veuillez sélectionner un restaurant.';
+      return;
+    }
+    if (!this.newPurchase.amount || this.newPurchase.amount <= 0) {
+      this.addPurchaseError = 'Veuillez entrer un montant valide.';
+      return;
+    }
+    if (!this.newPurchase.description.trim()) {
+      this.addPurchaseError = 'Veuillez entrer une description.';
+      return;
+    }
+
+    const pointsToUse = this.newPurchase.usePoints ? Math.min(this.newPurchase.pointsToUse, this.getMaxPointsToUse()) : 0;
+    const pointsEarned = Math.floor(this.newPurchase.amount);
+
+    this.addPurchaseLoading = true;
+    this.addPurchaseError = '';
+
+    try {
+      await this.storageService.addPurchase({
+        clientId: this.client.id,
+        restaurantId: this.newPurchase.restaurantId,
+        amount: this.newPurchase.amount,
+        pointsEarned,
+        pointsUsed: pointsToUse,
+        description: this.newPurchase.description.trim()
+      });
+      await this.loadData();
+      this.closeAddPurchaseModal();
+      this.activeTab = 'purchases';
+    } catch {
+      this.addPurchaseError = 'Une erreur est survenue. Veuillez réessayer.';
+    } finally {
+      this.addPurchaseLoading = false;
+    }
+  }
+
   async logout() {
     await this.authService.logout();
   }
@@ -92,4 +179,6 @@ export class ClientDashboardComponent implements OnInit {
   setActiveTab(tab: string) {
     this.activeTab = tab;
   }
+
+  readonly Math = Math;
 }

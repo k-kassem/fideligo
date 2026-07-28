@@ -1,4 +1,4 @@
-<div class="min-h-screen bg-gray-50" *ngIf="client; else noClient">
+﻿<div class="min-h-screen bg-gray-50" *ngIf="client; else noClient">
   <!-- Header -->
   <header class="bg-white shadow-sm border-b">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -10,21 +10,30 @@
             </svg>
           </div>
           <div>
-            <h1 class="text-xl font-bold text-gray-900">
-              {{ client.firstName }} {{ client.lastName }}
-            </h1>
+            <h1 class="text-xl font-bold text-gray-900">{{ client.firstName }} {{ client.lastName }}</h1>
             <p class="text-sm text-gray-500">Espace Client</p>
           </div>
         </div>
-        <button
-          class="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
-          (click)="logout()"
-        >
-          <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
-          </svg>
-          <span>Déconnexion</span>
-        </button>
+        <div class="flex items-center space-x-3">
+          <button
+            class="flex items-center space-x-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
+            (click)="openAddPurchaseModal()"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Nouvel Achat</span>
+          </button>
+          <button
+            class="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+            (click)="logout()"
+          >
+            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path>
+            </svg>
+            <span>DÃ©connexion</span>
+          </button>
+        </div>
       </div>
     </div>
   </header>
@@ -36,14 +45,19 @@
       <div class="flex items-center justify-between">
         <div>
           <h2 class="text-2xl font-bold mb-2">Bienvenue, {{ client.firstName }} !</h2>
-          <p class="text-orange-100">
-            Consultez vos points de fidélité et vos achats dans tous vos restaurants préférés.
-          </p>
+          <p class="text-orange-100">Consultez vos points de fidÃ©litÃ© et vos achats dans tous vos restaurants prÃ©fÃ©rÃ©s.</p>
         </div>
-        <div class="hidden md:block">
-          <svg class="h-16 w-16 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
-          </svg>
+        <div class="hidden md:flex flex-col items-center">
+          <button
+            class="flex items-center space-x-2 px-5 py-3 bg-white text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition-colors shadow"
+            (click)="openAddPurchaseModal()"
+          >
+            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            <span>Enregistrer un achat</span>
+          </button>
+          <p class="text-xs text-orange-200 mt-2">Gagnez 1 point par euro dÃ©pensÃ©</p>
         </div>
       </div>
     </div>
@@ -58,7 +72,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm text-gray-600">Points totaux</p>
+            <p class="text-sm text-gray-600">Points disponibles</p>
             <p class="text-2xl font-bold text-gray-900">{{ getTotalPoints() }}</p>
           </div>
         </div>
@@ -84,7 +98,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm text-gray-600">Points gagnés</p>
+            <p class="text-sm text-gray-600">Points gagnÃ©s</p>
             <p class="text-2xl font-bold text-gray-900">{{ getTotalPointsEarned() }}</p>
           </div>
         </div>
@@ -97,7 +111,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm text-gray-600">Points utilisés</p>
+            <p class="text-sm text-gray-600">Points utilisÃ©s</p>
             <p class="text-2xl font-bold text-gray-900">{{ getTotalPointsUsed() }}</p>
           </div>
         </div>
@@ -152,8 +166,11 @@
                   <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
                   </svg>
-                  <p>Aucun point enregistré</p>
-                  <p class="text-sm">Faites des achats pour gagner des points !</p>
+                  <p>Aucun point enregistrÃ©</p>
+                  <p class="text-sm mt-1">
+                    <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
+                    pour gagner des points !
+                  </p>
                 </div>
                 <div *ngIf="pointsInfo.length > 0" class="space-y-4">
                   <div *ngFor="let info of pointsInfo" class="border rounded-lg p-4">
@@ -167,8 +184,9 @@
                       </span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
-                      <div class="bg-orange-500 h-2 rounded-full" [style.width.%]="(info.points / 100) * 100"></div>
+                      <div class="bg-orange-500 h-2 rounded-full" [style.width.%]="Math.min((info.points / 100) * 100, 100)"></div>
                     </div>
+                    <p class="text-xs text-gray-400 mt-1">{{ info.points }}/100 pts pour une rÃ©compense</p>
                   </div>
                 </div>
               </div>
@@ -181,28 +199,37 @@
                   <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"></path>
                   </svg>
-                  Résumé
+                  RÃ©sumÃ©
                 </h3>
               </div>
               <div class="p-6">
                 <div class="space-y-4">
                   <div class="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                    <span class="text-gray-600">Total dépensé</span>
-                    <span class="font-bold text-lg">{{ getTotalPurchases() | number:'1.2-2' }} €</span>
+                    <span class="text-gray-600">Total dÃ©pensÃ©</span>
+                    <span class="font-bold text-lg">{{ getTotalPurchases() | number:'1.2-2' }} â‚¬</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-green-50 rounded-lg">
-                    <span class="text-gray-600">Points gagnés au total</span>
+                    <span class="text-gray-600">Points gagnÃ©s au total</span>
                     <span class="font-bold text-lg text-green-700">+{{ getTotalPointsEarned() }}</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-purple-50 rounded-lg">
-                    <span class="text-gray-600">Points utilisés au total</span>
-                    <span class="font-bold text-lg text-purple-700">-${{ getTotalPointsUsed() }}</span>
+                    <span class="text-gray-600">Points utilisÃ©s au total</span>
+                    <span class="font-bold text-lg text-purple-700">-{{ getTotalPointsUsed() }}</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border-2 border-orange-200">
                     <span class="text-gray-800 font-medium">Points disponibles</span>
                     <span class="font-bold text-2xl text-orange-600">{{ getTotalPoints() }}</span>
                   </div>
                 </div>
+                <button
+                  class="mt-6 w-full flex items-center justify-center space-x-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
+                  (click)="openAddPurchaseModal()"
+                >
+                  <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  <span>Enregistrer un achat</span>
+                </button>
               </div>
             </div>
           </div>
@@ -211,21 +238,32 @@
         <!-- Purchases Tab -->
         <div *ngIf="activeTab === 'purchases'">
           <div class="bg-white border rounded-lg">
-            <div class="p-6 border-b">
+            <div class="p-6 border-b flex justify-between items-center">
               <h3 class="text-lg font-semibold flex items-center">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                 </svg>
                 Historique de mes Achats
               </h3>
+              <button
+                class="flex items-center space-x-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
+                (click)="openAddPurchaseModal()"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                </svg>
+                <span>Nouvel achat</span>
+              </button>
             </div>
             <div class="p-6">
               <div *ngIf="purchases.length === 0" class="text-center py-12 text-gray-500">
                 <svg class="h-12 w-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                 </svg>
-                <p>Aucun achat enregistré</p>
-                <p class="text-sm">Vos achats apparaîtront ici</p>
+                <p>Aucun achat enregistrÃ©</p>
+                <p class="text-sm mt-2">
+                  <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
+                </p>
               </div>
               <div *ngIf="purchases.length > 0" class="overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
@@ -252,20 +290,20 @@
                         {{ getRestaurantName(purchase.restaurantId) }}
                       </td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.description }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.amount | number:'1.2-2' }} €</td>
+                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ purchase.amount | number:'1.2-2' }} â‚¬</td>
                       <td class="px-6 py-4 whitespace-nowrap text-sm">
                         <div class="flex flex-col space-y-1">
                           <span *ngIf="purchase.pointsEarned > 0" class="text-green-600 font-medium flex items-center">
                             <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
                             </svg>
-                            +{{ purchase.pointsEarned }}
+                            +{{ purchase.pointsEarned }} pts
                           </span>
                           <span *ngIf="purchase.pointsUsed > 0" class="text-red-600 font-medium flex items-center">
                             <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
                             </svg>
-                            -{{ purchase.pointsUsed }}
+                            -{{ purchase.pointsUsed }} pts
                           </span>
                         </div>
                       </td>
@@ -279,6 +317,139 @@
       </div>
     </div>
   </main>
+</div>
+
+<!-- Modal Nouvel Achat -->
+<div *ngIf="showAddPurchaseModal" class="fixed inset-0 z-50 overflow-y-auto">
+  <div class="flex items-center justify-center min-h-screen px-4">
+    <!-- Backdrop -->
+    <div class="fixed inset-0 bg-black bg-opacity-50 transition-opacity" (click)="closeAddPurchaseModal()"></div>
+
+    <!-- Modal Panel -->
+    <div class="relative bg-white rounded-xl shadow-2xl w-full max-w-md z-10">
+      <!-- Header -->
+      <div class="flex items-center justify-between p-6 border-b">
+        <div class="flex items-center space-x-3">
+          <div class="bg-orange-100 p-2 rounded-lg">
+            <svg class="h-5 w-5 text-orange-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
+            </svg>
+          </div>
+          <h3 class="text-lg font-semibold text-gray-900">Enregistrer un achat</h3>
+        </div>
+        <button class="text-gray-400 hover:text-gray-600 transition-colors" (click)="closeAddPurchaseModal()">
+          <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Form -->
+      <div class="p-6 space-y-5">
+        <!-- Error -->
+        <div *ngIf="addPurchaseError" class="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700 flex items-center">
+          <svg class="h-4 w-4 mr-2 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          {{ addPurchaseError }}
+        </div>
+
+        <!-- Restaurant -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Restaurant <span class="text-red-500">*</span></label>
+          <select
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            [(ngModel)]="newPurchase.restaurantId"
+            (ngModelChange)="onRestaurantChange()"
+          >
+            <option value="">-- SÃ©lectionner un restaurant --</option>
+            <option *ngFor="let r of restaurants" [value]="r.id">{{ r.name }}</option>
+          </select>
+        </div>
+
+        <!-- Montant -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Montant (â‚¬) <span class="text-red-500">*</span></label>
+          <input
+            type="number"
+            min="0.01"
+            step="0.01"
+            placeholder="Ex : 25.50"
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            [(ngModel)]="newPurchase.amount"
+          />
+          <p *ngIf="newPurchase.amount && newPurchase.amount > 0" class="text-xs text-orange-600 mt-1">
+            Vous gagnerez <strong>{{ newPurchase.amount | number:'1.0-0' }} points</strong> avec cet achat
+          </p>
+        </div>
+
+        <!-- Description -->
+        <div>
+          <label class="block text-sm font-medium text-gray-700 mb-1">Description <span class="text-red-500">*</span></label>
+          <input
+            type="text"
+            placeholder="Ex : DÃ©jeuner, DÃ®ner, Menu du jour..."
+            class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+            [(ngModel)]="newPurchase.description"
+          />
+        </div>
+
+        <!-- Utiliser des points -->
+        <div *ngIf="newPurchase.restaurantId && getAvailablePointsForRestaurant(newPurchase.restaurantId) > 0"
+             class="border border-orange-200 bg-orange-50 rounded-lg p-4">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2">
+              <input
+                id="usePoints"
+                type="checkbox"
+                class="h-4 w-4 text-orange-500 border-gray-300 rounded focus:ring-orange-500"
+                [(ngModel)]="newPurchase.usePoints"
+                (ngModelChange)="onUsePointsChange()"
+              />
+              <label for="usePoints" class="text-sm font-medium text-gray-700">
+                Utiliser mes points
+              </label>
+            </div>
+            <span class="text-xs bg-orange-100 text-orange-700 px-2 py-1 rounded-full font-medium">
+              {{ getAvailablePointsForRestaurant(newPurchase.restaurantId) }} pts disponibles
+            </span>
+          </div>
+          <div *ngIf="newPurchase.usePoints" class="space-y-2">
+            <label class="block text-xs text-gray-600">Points à utiliser (max {{ getMaxPointsToUse() }})</label>
+            <input
+              type="number"
+              min="0"
+              [max]="getMaxPointsToUse()"
+              class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+              [(ngModel)]="newPurchase.pointsToUse"
+            />
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div class="flex justify-end space-x-3 px-6 pb-6">
+        <button
+          class="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg text-sm font-medium hover:bg-gray-50 transition-colors"
+          (click)="closeAddPurchaseModal()"
+          [disabled]="addPurchaseLoading"
+        >
+          Annuler
+        </button>
+        <button
+          class="flex items-center space-x-2 px-5 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg text-sm font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          (click)="submitAddPurchase()"
+          [disabled]="addPurchaseLoading"
+        >
+          <svg *ngIf="addPurchaseLoading" class="animate-spin h-4 w-4" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"></path>
+          </svg>
+          <span>{{ addPurchaseLoading ? 'Enregistrement...' : 'Enregistrer' }}</span>
+        </button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <ng-template #noClient>
