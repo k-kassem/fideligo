@@ -3,13 +3,17 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+require('dotenv').config();
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
 
 const PORT = process.env.PORT || 3000;
 const DB_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DB_DIR, 'loyality.db');
+
+const MAIL_FROM = process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@fidelite.local';
 
 const INITIAL_ADMIN = {
   email: 'admin@fidelite.com',
@@ -27,6 +31,49 @@ function nowIso() {
 
 function generateVerificationCode() {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function createMailTransporter() {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS;
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: process.env.SMTP_SECURE === 'true' || port === 465,
+    auth: {
+      user,
+      pass
+    }
+  });
+}
+
+async function sendVerificationEmail(email, code) {
+  const transporter = createMailTransporter();
+
+  if (!transporter) {
+    throw new Error('Configuration SMTP manquante (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS).');
+  }
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: 'Votre code de vérification Fidelité',
+    text: `Bonjour,\n\nVotre code de vérification est : ${code}\n\nCe code expire dans 10 minutes.\n\nFidelité`,
+    html: `
+      <p>Bonjour,</p>
+      <p>Votre code de vérification est :</p>
+      <p style="font-size:24px;font-weight:bold;letter-spacing:2px">${code}</p>
+      <p>Ce code expire dans <strong>10 minutes</strong>.</p>
+      <p>Fidelité</p>
+    `
+  });
 }
 
 async function hashPassword(password) {
@@ -352,13 +399,19 @@ async function bootstrap() {
       throw error;
     }
 
-    console.log(`[MAIL] Code de vérification pour ${email}: ${code}`);
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (error) {
+      console.error(`[MAIL] Échec d'envoi du code de vérification à ${email}:`, error.message);
+      return res.status(500).json({
+        error: "Compte créé, mais l'envoi de l'email a échoué. Vérifiez la configuration SMTP puis cliquez sur 'Renvoyer le code'."
+      });
+    }
 
     res.status(201).json({
       ok: true,
       email,
-      message: 'Compte créé. Un code de vérification a été envoyé par email.',
-      verificationCode: code
+      message: 'Compte créé. Un code de vérification a été envoyé par email.'
     });
   }));
 
@@ -439,12 +492,18 @@ async function bootstrap() {
       [generateId(), user.id, code, expiresAt, createdAt]
     );
 
-    console.log(`[MAIL] Nouveau code de vérification pour ${email}: ${code}`);
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (error) {
+      console.error(`[MAIL] Échec de renvoi du code à ${email}:`, error.message);
+      return res.status(500).json({
+        error: "Impossible d'envoyer l'email. Vérifiez la configuration SMTP."
+      });
+    }
 
     res.json({
       ok: true,
-      message: 'Un nouveau code a été envoyé par email.',
-      verificationCode: code
+      message: 'Un nouveau code a été envoyé par email.'
     });
   }));
 
