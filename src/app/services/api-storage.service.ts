@@ -4,6 +4,7 @@ import { firstValueFrom } from 'rxjs';
 import type { User, Restaurant, Client, Purchase, PointsBalance } from '../types';
 
 type PointsByRestaurant = { restaurant: Restaurant; points: number };
+type CreatePurchasePayload = Omit<Purchase, 'id' | 'date' | 'pointsEarned'> & { pointsEarned?: number; bonusPoints?: number };
 
 @Injectable({
   providedIn: 'root'
@@ -116,7 +117,7 @@ export class StorageService {
     return firstValueFrom(this.http.get<Purchase[]>(`${this.apiBase}/purchases`));
   }
 
-  async addPurchase(purchase: Omit<Purchase, 'id' | 'date'>): Promise<Purchase> {
+  async addPurchase(purchase: CreatePurchasePayload): Promise<Purchase> {
     return firstValueFrom(this.http.post<Purchase>(`${this.apiBase}/purchases`, purchase));
   }
 

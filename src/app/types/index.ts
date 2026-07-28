@@ -19,6 +19,7 @@ export interface Restaurant {
   address: string;
   description: string;
   userId: string; // Référence à l'utilisateur restaurant
+  pointsPerEuro: number; // Nombre de points gagnés par euro dépensé
   subscriptionEndDate?: string; // Date de fin de souscription (optionnelle)
   createdAt: string;
 }

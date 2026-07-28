@@ -57,7 +57,7 @@
             </svg>
             <span>Enregistrer un achat</span>
           </button>
-          <p class="text-xs text-orange-200 mt-2">Gagnez 1 point par euro dépensé</p>
+          <p class="text-xs text-orange-200 mt-2">Gagnez des points selon le barème défini par chaque restaurant</p>
         </div>
       </div>
     </div>
@@ -378,8 +378,9 @@
             class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
             [(ngModel)]="newPurchase.amount"
           />
-          <p *ngIf="newPurchase.amount && newPurchase.amount > 0" class="text-xs text-orange-600 mt-1">
-            Vous gagnerez <strong>{{ newPurchase.amount | number:'1.0-0' }} points</strong> avec cet achat
+          <p *ngIf="newPurchase.amount && newPurchase.amount > 0 && newPurchase.restaurantId" class="text-xs text-orange-600 mt-1">
+            Estimation: <strong>{{ (newPurchase.amount * getPointsPerEuroForRestaurant(newPurchase.restaurantId)) | number:'1.0-0' }} points</strong>
+            (barème {{ getPointsPerEuroForRestaurant(newPurchase.restaurantId) | number:'1.0-2' }} pts/€)
           </p>
         </div>
 

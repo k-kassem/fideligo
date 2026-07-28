@@ -56,6 +56,7 @@ function mapRestaurant(row) {
     address: row.address,
     description: row.description,
     userId: row.user_id,
+    pointsPerEuro: row.points_per_euro,
     subscriptionEndDate: row.subscription_end_date ?? undefined,
     createdAt: row.created_at
   };
@@ -129,6 +130,7 @@ async function initDb() {
       address TEXT NOT NULL,
       description TEXT NOT NULL,
       user_id TEXT NOT NULL UNIQUE,
+      points_per_euro REAL NOT NULL DEFAULT 1 CHECK(points_per_euro >= 0),
       subscription_end_date TEXT,
       created_at TEXT NOT NULL,
       FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
@@ -189,6 +191,12 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_points_balances_client_id ON points_balances(client_id);
     CREATE INDEX IF NOT EXISTS idx_points_balances_restaurant_id ON points_balances(restaurant_id);
   `);
+
+  const restaurantColumns = await db.all('PRAGMA table_info(restaurants)');
+  const hasPointsPerEuro = restaurantColumns.some((column) => column.name === 'points_per_euro');
+  if (!hasPointsPerEuro) {
+    await db.exec('ALTER TABLE restaurants ADD COLUMN points_per_euro REAL NOT NULL DEFAULT 1');
+  }
 
   const admin = await db.get('SELECT id FROM users WHERE email = ?', [INITIAL_ADMIN.email]);
   if (!admin) {
@@ -346,20 +354,21 @@ async function bootstrap() {
     const restaurant = {
       id: generateId(),
       ...payload,
+      pointsPerEuro: Number(payload.pointsPerEuro ?? 1),
       createdAt: nowIso()
     };
 
     await db.run(
-      `INSERT INTO restaurants (id, name, email, phone, address, description, user_id, subscription_end_date, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      [restaurant.id, restaurant.name, restaurant.email, restaurant.phone, restaurant.address, restaurant.description, restaurant.userId, restaurant.subscriptionEndDate ?? null, restaurant.createdAt]
+      `INSERT INTO restaurants (id, name, email, phone, address, description, user_id, points_per_euro, subscription_end_date, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [restaurant.id, restaurant.name, restaurant.email, restaurant.phone, restaurant.address, restaurant.description, restaurant.userId, restaurant.pointsPerEuro, restaurant.subscriptionEndDate ?? null, restaurant.createdAt]
     );
 
     res.status(201).json(restaurant);
   }));
 
   app.patch('/api/restaurants/:id', asyncHandler(async (req, res) => {
-    const { name, email, phone, address, description, subscriptionEndDate } = req.body;
+    const { name, email, phone, address, description, pointsPerEuro, subscriptionEndDate } = req.body;
     const updates = [];
     const params = [];
 
@@ -368,6 +377,7 @@ async function bootstrap() {
     if (phone !== undefined) { updates.push('phone = ?'); params.push(phone); }
     if (address !== undefined) { updates.push('address = ?'); params.push(address); }
     if (description !== undefined) { updates.push('description = ?'); params.push(description); }
+    if (pointsPerEuro !== undefined) { updates.push('points_per_euro = ?'); params.push(Number(pointsPerEuro)); }
     if (subscriptionEndDate !== undefined) { updates.push('subscription_end_date = ?'); params.push(subscriptionEndDate ?? null); }
 
     if (updates.length > 0) {
@@ -461,19 +471,38 @@ async function bootstrap() {
 
   app.post('/api/purchases', asyncHandler(async (req, res) => {
     const payload = req.body;
+    const amount = Number(payload.amount);
+    const pointsUsed = Math.max(0, Math.floor(Number(payload.pointsUsed ?? 0)));
+    const bonusPoints = Math.max(0, Math.floor(Number(payload.bonusPoints ?? 0)));
 
-    // Calcul automatique : 1 point par euro dépensé
-    const pointsEarned = payload.pointsEarned !== undefined
-      ? payload.pointsEarned
-      : Math.floor(Number(payload.amount));
+    if (!payload.clientId || !payload.restaurantId || Number.isNaN(amount) || amount < 0) {
+      return res.status(400).json({ error: 'Données d\'achat invalides' });
+    }
 
-    const pointsUsed = payload.pointsUsed ?? 0;
+    const restaurant = await db.get('SELECT points_per_euro FROM restaurants WHERE id = ? LIMIT 1', [payload.restaurantId]);
+    if (!restaurant) {
+      return res.status(404).json({ error: 'Restaurant introuvable' });
+    }
+
+    const pointsPerEuro = Number(restaurant.points_per_euro ?? 1);
+    const basePoints = Math.floor(amount * pointsPerEuro);
+    const pointsEarned = basePoints + bonusPoints;
+
+    const existing = await db.get(
+      'SELECT points FROM points_balances WHERE client_id = ? AND restaurant_id = ? LIMIT 1',
+      [payload.clientId, payload.restaurantId]
+    );
+    const currentBalance = Number(existing?.points ?? 0);
+
+    if (pointsUsed > currentBalance) {
+      return res.status(400).json({ error: `Points insuffisants: solde actuel ${currentBalance}` });
+    }
 
     const purchase = {
       id: generateId(),
       clientId: payload.clientId,
       restaurantId: payload.restaurantId,
-      amount: Number(payload.amount),
+      amount,
       pointsEarned,
       pointsUsed,
       description: payload.description ?? '',
@@ -488,13 +517,9 @@ async function bootstrap() {
 
     // Mise à jour du solde de points : ajout des points gagnés, retrait des points utilisés
     const netDelta = purchase.pointsEarned - purchase.pointsUsed;
-    const existing = await db.get(
-      'SELECT points FROM points_balances WHERE client_id = ? AND restaurant_id = ? LIMIT 1',
-      [purchase.clientId, purchase.restaurantId]
-    );
     const now = nowIso();
     if (existing) {
-      const nextPoints = Math.max(0, existing.points + netDelta);
+      const nextPoints = Math.max(0, currentBalance + netDelta);
       await db.run(
         'UPDATE points_balances SET points = ?, updated_at = ? WHERE client_id = ? AND restaurant_id = ?',
         [nextPoints, now, purchase.clientId, purchase.restaurantId]

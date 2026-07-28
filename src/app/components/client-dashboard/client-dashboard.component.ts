@@ -105,6 +105,10 @@ export class ClientDashboardComponent implements OnInit {
     return this.pointsInfo.find(i => i.restaurant.id === restaurantId)?.points ?? 0;
   }
 
+  getPointsPerEuroForRestaurant(restaurantId: string): number {
+    return this.restaurants.find((r) => r.id === restaurantId)?.pointsPerEuro ?? 1;
+  }
+
   getMaxPointsToUse(): number {
     if (!this.newPurchase.restaurantId || !this.newPurchase.amount) return 0;
     const available = this.getAvailablePointsForRestaurant(this.newPurchase.restaurantId);
@@ -148,7 +152,6 @@ export class ClientDashboardComponent implements OnInit {
     }
 
     const pointsToUse = this.newPurchase.usePoints ? Math.min(this.newPurchase.pointsToUse, this.getMaxPointsToUse()) : 0;
-    const pointsEarned = Math.floor(this.newPurchase.amount);
 
     this.addPurchaseLoading = true;
     this.addPurchaseError = '';
@@ -158,7 +161,6 @@ export class ClientDashboardComponent implements OnInit {
         clientId: this.client.id,
         restaurantId: this.newPurchase.restaurantId,
         amount: this.newPurchase.amount,
-        pointsEarned,
         pointsUsed: pointsToUse,
         description: this.newPurchase.description.trim()
       });
