@@ -72,7 +72,7 @@
             </svg>
           </div>
           <div class="ml-4">
-            <p class="text-sm text-gray-600">Points disponibles</p>
+            <p class="text-sm text-gray-600">Points cumulés</p>
             <p class="text-2xl font-bold text-gray-900">{{ getTotalPoints() }}</p>
           </div>
         </div>
@@ -217,9 +217,10 @@
                     <span class="font-bold text-lg text-purple-700">-{{ getTotalPointsUsed() }}</span>
                   </div>
                   <div class="flex justify-between items-center p-3 bg-orange-50 rounded-lg border-2 border-orange-200">
-                    <span class="text-gray-800 font-medium">Points disponibles</span>
+                    <span class="text-gray-800 font-medium">Points cumulés (tous restaurants)</span>
                     <span class="font-bold text-2xl text-orange-600">{{ getTotalPoints() }}</span>
                   </div>
+                  <p class="text-xs text-gray-500">Les points restent liés à leur restaurant d'origine et s'utilisent uniquement dans ce restaurant.</p>
                 </div>
                 <button
                   class="mt-6 w-full flex items-center justify-center space-x-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
@@ -365,6 +366,21 @@
             <option value="">-- Sélectionner un restaurant --</option>
             <option *ngFor="let r of restaurants" [value]="r.id">{{ r.name }}</option>
           </select>
+        </div>
+
+        <div class="border border-gray-200 rounded-lg p-3 bg-gray-50">
+          <p class="text-xs font-medium text-gray-700 mb-2">Points disponibles par restaurant</p>
+          <div class="space-y-1 max-h-28 overflow-auto">
+            <div
+              *ngFor="let item of getPointsByRestaurantForDisplay()"
+              class="flex justify-between items-center text-xs px-2 py-1 rounded"
+              [class.bg-orange-100]="item.restaurantId === newPurchase.restaurantId"
+            >
+              <span class="text-gray-700">{{ item.restaurantName }}</span>
+              <span class="font-semibold" [class.text-orange-700]="item.restaurantId === newPurchase.restaurantId">{{ item.points }} pts</span>
+            </div>
+          </div>
+          <p class="text-[11px] text-gray-500 mt-2">Les points du restaurant A sont utilisables uniquement dans le restaurant A.</p>
         </div>
 
         <!-- Montant -->

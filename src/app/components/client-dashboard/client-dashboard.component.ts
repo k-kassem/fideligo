@@ -109,6 +109,16 @@ export class ClientDashboardComponent implements OnInit {
     return this.restaurants.find((r) => r.id === restaurantId)?.pointsPerEuro ?? 1;
   }
 
+  getPointsByRestaurantForDisplay(): Array<{ restaurantId: string; restaurantName: string; points: number }> {
+    return this.restaurants
+      .map((restaurant) => ({
+        restaurantId: restaurant.id,
+        restaurantName: restaurant.name,
+        points: this.getAvailablePointsForRestaurant(restaurant.id)
+      }))
+      .sort((a, b) => a.restaurantName.localeCompare(b.restaurantName));
+  }
+
   getMaxPointsToUse(): number {
     if (!this.newPurchase.restaurantId || !this.newPurchase.amount) return 0;
     const available = this.getAvailablePointsForRestaurant(this.newPurchase.restaurantId);
