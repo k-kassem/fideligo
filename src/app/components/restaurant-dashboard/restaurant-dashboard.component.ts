@@ -21,6 +21,8 @@ export class RestaurantDashboardComponent implements OnInit {
   clientNameMap: Record<string, string> = {};
   error = '';
   success = '';
+  isRateSavedPopupOpen = false;
+  private rateSavedPopupTimeout: ReturnType<typeof setTimeout> | null = null;
   activeTab = 'clients';
   pointsPerEuroInput = 1;
 
@@ -284,8 +286,30 @@ export class RestaurantDashboardComponent implements OnInit {
         this.pointsPerEuroInput = updated.pointsPerEuro;
       }
       this.success = 'Barème points/€ mis à jour avec succès';
+      this.showRateSavedPopup();
     } catch {
       this.error = 'Erreur lors de la mise à jour du barème points/€';
+    }
+  }
+
+  showRateSavedPopup() {
+    this.isRateSavedPopupOpen = true;
+
+    if (this.rateSavedPopupTimeout) {
+      clearTimeout(this.rateSavedPopupTimeout);
+    }
+
+    this.rateSavedPopupTimeout = setTimeout(() => {
+      this.isRateSavedPopupOpen = false;
+      this.rateSavedPopupTimeout = null;
+    }, 3000);
+  }
+
+  closeRateSavedPopup() {
+    this.isRateSavedPopupOpen = false;
+    if (this.rateSavedPopupTimeout) {
+      clearTimeout(this.rateSavedPopupTimeout);
+      this.rateSavedPopupTimeout = null;
     }
   }
 
