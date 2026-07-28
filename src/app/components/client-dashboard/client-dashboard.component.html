@@ -239,22 +239,36 @@
         <!-- Purchases Tab -->
         <div *ngIf="activeTab === 'purchases'">
           <div class="bg-white border rounded-lg">
-            <div class="p-6 border-b flex justify-between items-center">
+            <div class="p-6 border-b flex flex-wrap gap-3 justify-between items-center">
               <h3 class="text-lg font-semibold flex items-center">
                 <svg class="h-5 w-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"></path>
                 </svg>
                 Historique de mes Achats
               </h3>
-              <button
-                class="flex items-center space-x-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
-                (click)="openAddPurchaseModal()"
-              >
-                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
-                </svg>
-                <span>Nouvel achat</span>
-              </button>
+              <div class="flex flex-wrap items-center gap-3">
+                <!-- Filtre par restaurant -->
+                <div class="flex items-center space-x-2">
+                  <label class="text-sm text-gray-600 whitespace-nowrap">Filtrer par restaurant :</label>
+                  <select
+                    [(ngModel)]="historyFilterRestaurantId"
+                    (ngModelChange)="onHistoryFilterChange()"
+                    class="border border-gray-300 rounded-md px-3 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-orange-400"
+                  >
+                    <option value="">Tous les restaurants</option>
+                    <option *ngFor="let r of restaurants" [value]="r.id">{{ r.name }}</option>
+                  </select>
+                </div>
+                <button
+                  class="flex items-center space-x-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
+                  (click)="openAddPurchaseModal()"
+                >
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                  </svg>
+                  <span>Nouvel achat</span>
+                </button>
+              </div>
             </div>
             <div class="p-6">
               <div *ngIf="purchases.length === 0" class="text-center py-12 text-gray-500">
@@ -266,51 +280,89 @@
                   <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
                 </p>
               </div>
-              <div *ngIf="purchases.length > 0" class="overflow-x-auto">
-                <table class="min-w-full divide-y divide-gray-200">
-                  <thead class="bg-gray-50">
-                    <tr>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurant</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
-                      <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
-                    </tr>
-                  </thead>
-                  <tbody class="bg-white divide-y divide-gray-200">
-                    <tr *ngFor="let purchase of sortedPurchases">
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        <div class="flex items-center">
-                          <svg class="h-4 w-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
-                          </svg>
-                          {{ purchase.date | date:'dd MMM yyyy' }}
-                        </div>
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {{ getRestaurantName(purchase.restaurantId) }}
-                      </td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.description }}</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ purchase.amount | number:'1.2-2' }} €</td>
-                      <td class="px-6 py-4 whitespace-nowrap text-sm">
-                        <div class="flex flex-col space-y-1">
-                          <span *ngIf="purchase.pointsEarned > 0" class="text-green-600 font-medium flex items-center">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+              <div *ngIf="purchases.length > 0">
+                <!-- Résumé filtre -->
+                <p class="text-sm text-gray-500 mb-3">
+                  {{ filteredPurchases.length }} achat(s)
+                  <span *ngIf="historyFilterRestaurantId"> · {{ getRestaurantName(historyFilterRestaurantId) }}</span>
+                  — page {{ historyPage }} / {{ historyTotalPages }}
+                </p>
+                <div *ngIf="filteredPurchases.length === 0" class="text-center py-8 text-gray-400">
+                  Aucun achat pour ce restaurant.
+                </div>
+                <div *ngIf="filteredPurchases.length > 0" class="overflow-x-auto">
+                  <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                      <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Restaurant</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Description</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Montant</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Points</th>
+                      </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                      <tr *ngFor="let purchase of paginatedPurchases" class="hover:bg-gray-50">
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <div class="flex items-center">
+                            <svg class="h-4 w-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
                             </svg>
-                            +{{ purchase.pointsEarned }} pts
-                          </span>
-                          <span *ngIf="purchase.pointsUsed > 0" class="text-red-600 font-medium flex items-center">
-                            <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
-                            </svg>
-                            -{{ purchase.pointsUsed }} pts
-                          </span>
-                        </div>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                            {{ purchase.date | date:'dd MMM yyyy' }}
+                          </div>
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          {{ getRestaurantName(purchase.restaurantId) }}
+                        </td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{{ purchase.description }}</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ purchase.amount | number:'1.2-2' }} €</td>
+                        <td class="px-6 py-4 whitespace-nowrap text-sm">
+                          <div class="flex flex-col space-y-1">
+                            <span *ngIf="purchase.pointsEarned > 0" class="text-green-600 font-medium flex items-center">
+                              <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path>
+                              </svg>
+                              +{{ purchase.pointsEarned }} pts
+                            </span>
+                            <span *ngIf="purchase.pointsUsed > 0" class="text-red-600 font-medium flex items-center">
+                              <svg class="h-3 w-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 17h8m0 0V9m0 8l-8-8-4 4-6-6"></path>
+                              </svg>
+                              -{{ purchase.pointsUsed }} pts
+                            </span>
+                          </div>
+                        </td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+
+                <!-- Pagination -->
+                <div *ngIf="historyTotalPages > 1" class="flex items-center justify-between mt-4 pt-4 border-t">
+                  <p class="text-sm text-gray-500">
+                    Affichage de {{ (historyPage - 1) * historyPageSize + 1 }}–{{ Math.min(historyPage * historyPageSize, filteredPurchases.length) }} sur {{ filteredPurchases.length }}
+                  </p>
+                  <div class="flex items-center space-x-1">
+                    <button
+                      (click)="historyPrevPage()"
+                      [disabled]="historyPage === 1"
+                      class="px-3 py-1.5 rounded-md text-sm border transition-colors"
+                      [ngClass]="historyPage === 1 ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-300 hover:bg-gray-50'"
+                    >‹ Préc.</button>
+                    <button
+                      *ngFor="let p of historyPageRange"
+                      (click)="historyGoToPage(p)"
+                      class="px-3 py-1.5 rounded-md text-sm border transition-colors"
+                      [ngClass]="p === historyPage ? 'bg-orange-500 text-white border-orange-500' : 'text-gray-600 border-gray-300 hover:bg-gray-50'"
+                    >{{ p }}</button>
+                    <button
+                      (click)="historyNextPage()"
+                      [disabled]="historyPage === historyTotalPages"
+                      class="px-3 py-1.5 rounded-md text-sm border transition-colors"
+                      [ngClass]="historyPage === historyTotalPages ? 'text-gray-300 border-gray-200 cursor-not-allowed' : 'text-gray-600 border-gray-300 hover:bg-gray-50'"
+                    >Suiv. ›</button>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

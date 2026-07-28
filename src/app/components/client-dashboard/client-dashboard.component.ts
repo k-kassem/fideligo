@@ -26,6 +26,11 @@ export class ClientDashboardComponent implements OnInit {
   restaurantNameMap: Record<string, string> = {};
   activeTab = 'overview';
 
+  // History filter & pagination
+  historyFilterRestaurantId = '';
+  historyPage = 1;
+  readonly historyPageSize = 10;
+
   // Modal state
   showAddPurchaseModal = false;
   addPurchaseLoading = false;
@@ -99,6 +104,41 @@ export class ClientDashboardComponent implements OnInit {
     return this.purchases.slice().sort((a, b) =>
       new Date(b.date).getTime() - new Date(a.date).getTime()
     );
+  }
+
+  get filteredPurchases(): Purchase[] {
+    const sorted = this.sortedPurchases;
+    if (!this.historyFilterRestaurantId) return sorted;
+    return sorted.filter(p => p.restaurantId === this.historyFilterRestaurantId);
+  }
+
+  get historyTotalPages(): number {
+    return Math.max(1, Math.ceil(this.filteredPurchases.length / this.historyPageSize));
+  }
+
+  get paginatedPurchases(): Purchase[] {
+    const start = (this.historyPage - 1) * this.historyPageSize;
+    return this.filteredPurchases.slice(start, start + this.historyPageSize);
+  }
+
+  get historyPageRange(): number[] {
+    return Array.from({ length: this.historyTotalPages }, (_, i) => i + 1);
+  }
+
+  onHistoryFilterChange() {
+    this.historyPage = 1;
+  }
+
+  historyPrevPage() {
+    if (this.historyPage > 1) this.historyPage--;
+  }
+
+  historyNextPage() {
+    if (this.historyPage < this.historyTotalPages) this.historyPage++;
+  }
+
+  historyGoToPage(page: number) {
+    this.historyPage = page;
   }
 
   getAvailablePointsForRestaurant(restaurantId: string): number {
