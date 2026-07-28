@@ -20,13 +20,22 @@ Système de fidélité pour restaurants permettant la gestion des clients, des a
 - Angular 17
 - TypeScript
 - Tailwind CSS
-- LocalStorage pour la persistance des données
+- API Node.js (Express)
+- SQLite (fichier partagé côté serveur)
+
+## Architecture de persistance
+
+Toutes les opérations CRUD passent par l'API backend (`/api`) et sont stockées dans SQLite serveur :
+
+- Base de données: `server/data/loyality.db`
+- API backend: `http://localhost:3000`
+- Frontend Angular: `http://localhost:4200`
 
 ## Installation
 
 1. Cloner le projet
 2. Installer les dépendances : `npm install`
-3. Lancer le serveur de développement : `npm start`
+3. Lancer backend + frontend : `npm start`
 4. Ouvrir http://localhost:4200
 
 ## Build

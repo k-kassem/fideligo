@@ -1,51 +1,26 @@
 import { Injectable } from '@angular/core';
 import type { User, Restaurant, Client, Purchase, PointsBalance } from '../types';
 import { INITIAL_ADMIN } from '../types';
-
-// Clés de stockage
-const KEYS = {
-  USERS: 'fidelite_users',
-  RESTAURANTS: 'fidelite_restaurants',
-  CLIENTS: 'fidelite_clients',
-  PURCHASES: 'fidelite_purchases',
-  POINTS: 'fidelite_points',
-  CURRENT_USER: 'fidelite_current_user'
-};
+import { SqliteService } from './sqlite.service';
 
 @Injectable({
   providedIn: 'root'
 })
 export class StorageService {
+  constructor(private sqliteService: SqliteService) {}
 
   // Initialisation des données
-  initializeData() {
-    // Créer l'admin s'il n'existe pas
-    const users = this.getUsers();
-    if (users.length === 0) {
-      const adminUser: User = {
-        id: this.generateId(),
+  async initializeData(): Promise<void> {
+    await this.sqliteService.initialize();
+
+    const admin = this.findUserByEmail(INITIAL_ADMIN.email);
+    if (!admin) {
+      this.addUser({
         email: INITIAL_ADMIN.email,
         password: INITIAL_ADMIN.password,
         role: 'admin',
-        name: INITIAL_ADMIN.name,
-        createdAt: new Date().toISOString()
-      };
-      this.saveUsers([adminUser]);
-    }
-
-    // Migration: ajouter le champ région aux clients existants
-    const clients = this.getClients();
-    let needsMigration = false;
-    const migratedClients = clients.map(client => {
-      if (!client.region) {
-        needsMigration = true;
-        return { ...client, region: '' };
-      }
-      return client;
-    });
-
-    if (needsMigration) {
-      this.saveClients(migratedClients);
+        name: INITIAL_ADMIN.name
+      });
     }
   }
 
@@ -56,12 +31,23 @@ export class StorageService {
 
   // Users
   getUsers(): User[] {
-    const data = localStorage.getItem(KEYS.USERS);
-    return data ? JSON.parse(data) : [];
+    return this.sqliteService.query<User>(`
+      SELECT id, email, password, role, name, created_at AS createdAt
+      FROM users
+      ORDER BY created_at ASC
+    `);
   }
 
   saveUsers(users: User[]) {
-    localStorage.setItem(KEYS.USERS, JSON.stringify(users));
+    this.sqliteService.transaction(() => {
+      this.sqliteService.run('DELETE FROM users');
+      users.forEach((user) => {
+        this.sqliteService.run(
+          `INSERT INTO users (id, email, password, role, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+          [user.id, user.email, user.password, user.role, user.name, user.createdAt]
+        );
+      });
+    });
   }
 
   addUser(user: Omit<User, 'id' | 'createdAt'>): User {
@@ -71,27 +57,79 @@ export class StorageService {
       id: this.generateId(),
       createdAt: new Date().toISOString()
     };
-    users.push(newUser);
-    this.saveUsers(users);
+
+    this.sqliteService.run(
+      `INSERT INTO users (id, email, password, role, name, created_at) VALUES (?, ?, ?, ?, ?, ?)`,
+      [newUser.id, newUser.email, newUser.password, newUser.role, newUser.name, newUser.createdAt]
+    );
+
     return newUser;
   }
 
   findUserByEmail(email: string): User | undefined {
-    return this.getUsers().find(u => u.email.toLowerCase() === email.toLowerCase());
+    const user = this.sqliteService.queryOne<User>(
+      `SELECT id, email, password, role, name, created_at AS createdAt
+       FROM users
+       WHERE lower(email) = lower(?)
+       LIMIT 1`,
+      [email]
+    );
+
+    return user ?? undefined;
   }
 
   findUserById(id: string): User | undefined {
-    return this.getUsers().find(u => u.id === id);
+    const user = this.sqliteService.queryOne<User>(
+      `SELECT id, email, password, role, name, created_at AS createdAt
+       FROM users
+       WHERE id = ?
+       LIMIT 1`,
+      [id]
+    );
+
+    return user ?? undefined;
   }
 
   // Restaurants
   getRestaurants(): Restaurant[] {
-    const data = localStorage.getItem(KEYS.RESTAURANTS);
-    return data ? JSON.parse(data) : [];
+    return this.sqliteService.query<Restaurant>(`
+      SELECT
+        id,
+        name,
+        email,
+        phone,
+        address,
+        description,
+        user_id AS userId,
+        subscription_end_date AS subscriptionEndDate,
+        created_at AS createdAt
+      FROM restaurants
+      ORDER BY created_at ASC
+    `);
   }
 
   saveRestaurants(restaurants: Restaurant[]) {
-    localStorage.setItem(KEYS.RESTAURANTS, JSON.stringify(restaurants));
+    this.sqliteService.transaction(() => {
+      this.sqliteService.run('DELETE FROM restaurants');
+      restaurants.forEach((restaurant) => {
+        this.sqliteService.run(
+          `INSERT INTO restaurants (
+            id, name, email, phone, address, description, user_id, subscription_end_date, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            restaurant.id,
+            restaurant.name,
+            restaurant.email,
+            restaurant.phone,
+            restaurant.address,
+            restaurant.description,
+            restaurant.userId,
+            restaurant.subscriptionEndDate ?? null,
+            restaurant.createdAt
+          ]
+        );
+      });
+    });
   }
 
   addRestaurant(restaurant: Omit<Restaurant, 'id' | 'createdAt'>): Restaurant {
@@ -101,62 +139,214 @@ export class StorageService {
       id: this.generateId(),
       createdAt: new Date().toISOString()
     };
-    restaurants.push(newRestaurant);
-    this.saveRestaurants(restaurants);
+
+    this.sqliteService.run(
+      `INSERT INTO restaurants (
+        id, name, email, phone, address, description, user_id, subscription_end_date, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newRestaurant.id,
+        newRestaurant.name,
+        newRestaurant.email,
+        newRestaurant.phone,
+        newRestaurant.address,
+        newRestaurant.description,
+        newRestaurant.userId,
+        newRestaurant.subscriptionEndDate ?? null,
+        newRestaurant.createdAt
+      ]
+    );
+
     return newRestaurant;
   }
 
   findRestaurantByUserId(userId: string): Restaurant | undefined {
-    return this.getRestaurants().find(r => r.userId === userId);
+    const restaurant = this.sqliteService.queryOne<Restaurant>(
+      `SELECT
+         id,
+         name,
+         email,
+         phone,
+         address,
+         description,
+         user_id AS userId,
+         subscription_end_date AS subscriptionEndDate,
+         created_at AS createdAt
+       FROM restaurants
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+
+    return restaurant ?? undefined;
   }
 
   findRestaurantById(id: string): Restaurant | undefined {
-    return this.getRestaurants().find(r => r.id === id);
+    const restaurant = this.sqliteService.queryOne<Restaurant>(
+      `SELECT
+         id,
+         name,
+         email,
+         phone,
+         address,
+         description,
+         user_id AS userId,
+         subscription_end_date AS subscriptionEndDate,
+         created_at AS createdAt
+       FROM restaurants
+       WHERE id = ?
+       LIMIT 1`,
+      [id]
+    );
+
+    return restaurant ?? undefined;
   }
 
   deleteRestaurant(id: string) {
-    const restaurants = this.getRestaurants().filter(r => r.id !== id);
-    this.saveRestaurants(restaurants);
+    this.sqliteService.run('DELETE FROM restaurants WHERE id = ?', [id]);
   }
 
   updateRestaurant(id: string, updates: Partial<Omit<Restaurant, 'id' | 'createdAt'>>): Restaurant | null {
-    const restaurants = this.getRestaurants();
-    const index = restaurants.findIndex(r => r.id === id);
-    if (index === -1) return null;
+    const fields: string[] = [];
+    const params: any[] = [];
 
-    restaurants[index] = { ...restaurants[index], ...updates };
-    this.saveRestaurants(restaurants);
-    return restaurants[index];
+    if (updates.name !== undefined) {
+      fields.push('name = ?');
+      params.push(updates.name);
+    }
+    if (updates.email !== undefined) {
+      fields.push('email = ?');
+      params.push(updates.email);
+    }
+    if (updates.phone !== undefined) {
+      fields.push('phone = ?');
+      params.push(updates.phone);
+    }
+    if (updates.address !== undefined) {
+      fields.push('address = ?');
+      params.push(updates.address);
+    }
+    if (updates.description !== undefined) {
+      fields.push('description = ?');
+      params.push(updates.description);
+    }
+    if ('subscriptionEndDate' in updates) {
+      fields.push('subscription_end_date = ?');
+      params.push(updates.subscriptionEndDate ?? null);
+    }
+
+    if (fields.length === 0) {
+      return this.findRestaurantById(id) ?? null;
+    }
+
+    this.sqliteService.run(`UPDATE restaurants SET ${fields.join(', ')} WHERE id = ?`, [...params, id]);
+    return this.findRestaurantById(id) ?? null;
   }
 
   updateUser(id: string, updates: Partial<Omit<User, 'id' | 'createdAt'>>): User | null {
-    const users = this.getUsers();
-    const index = users.findIndex(u => u.id === id);
-    if (index === -1) return null;
+    const fields: string[] = [];
+    const params: any[] = [];
 
-    users[index] = { ...users[index], ...updates };
-    this.saveUsers(users);
-    return users[index];
+    if (updates.email !== undefined) {
+      fields.push('email = ?');
+      params.push(updates.email);
+    }
+    if (updates.password !== undefined) {
+      fields.push('password = ?');
+      params.push(updates.password);
+    }
+    if (updates.role !== undefined) {
+      fields.push('role = ?');
+      params.push(updates.role);
+    }
+    if (updates.name !== undefined) {
+      fields.push('name = ?');
+      params.push(updates.name);
+    }
+
+    if (fields.length === 0) {
+      return this.findUserById(id) ?? null;
+    }
+
+    this.sqliteService.run(`UPDATE users SET ${fields.join(', ')} WHERE id = ?`, [...params, id]);
+    return this.findUserById(id) ?? null;
   }
 
   updateClient(id: string, updates: Partial<Omit<Client, 'id' | 'createdAt'>>): Client | null {
-    const clients = this.getClients();
-    const index = clients.findIndex(c => c.id === id);
-    if (index === -1) return null;
+    const fields: string[] = [];
+    const params: any[] = [];
 
-    clients[index] = { ...clients[index], ...updates };
-    this.saveClients(clients);
-    return clients[index];
+    if (updates.firstName !== undefined) {
+      fields.push('first_name = ?');
+      params.push(updates.firstName);
+    }
+    if (updates.lastName !== undefined) {
+      fields.push('last_name = ?');
+      params.push(updates.lastName);
+    }
+    if (updates.email !== undefined) {
+      fields.push('email = ?');
+      params.push(updates.email);
+    }
+    if (updates.phone !== undefined) {
+      fields.push('phone = ?');
+      params.push(updates.phone);
+    }
+    if (updates.region !== undefined) {
+      fields.push('region = ?');
+      params.push(updates.region);
+    }
+    if (updates.userId !== undefined) {
+      fields.push('user_id = ?');
+      params.push(updates.userId);
+    }
+
+    if (fields.length === 0) {
+      return this.findClientById(id) ?? null;
+    }
+
+    this.sqliteService.run(`UPDATE clients SET ${fields.join(', ')} WHERE id = ?`, [...params, id]);
+    return this.findClientById(id) ?? null;
   }
 
   // Clients
   getClients(): Client[] {
-    const data = localStorage.getItem(KEYS.CLIENTS);
-    return data ? JSON.parse(data) : [];
+    return this.sqliteService.query<Client>(`
+      SELECT
+        id,
+        first_name AS firstName,
+        last_name AS lastName,
+        email,
+        phone,
+        region,
+        user_id AS userId,
+        created_at AS createdAt
+      FROM clients
+      ORDER BY created_at ASC
+    `);
   }
 
   saveClients(clients: Client[]) {
-    localStorage.setItem(KEYS.CLIENTS, JSON.stringify(clients));
+    this.sqliteService.transaction(() => {
+      this.sqliteService.run('DELETE FROM clients');
+      clients.forEach((client) => {
+        this.sqliteService.run(
+          `INSERT INTO clients (
+            id, first_name, last_name, email, phone, region, user_id, created_at
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            client.id,
+            client.firstName,
+            client.lastName,
+            client.email,
+            client.phone,
+            client.region,
+            client.userId,
+            client.createdAt
+          ]
+        );
+      });
+    });
   }
 
   addClient(client: Omit<Client, 'id' | 'createdAt'>): Client {
@@ -166,21 +356,84 @@ export class StorageService {
       id: this.generateId(),
       createdAt: new Date().toISOString()
     };
-    clients.push(newClient);
-    this.saveClients(clients);
+
+    this.sqliteService.run(
+      `INSERT INTO clients (
+        id, first_name, last_name, email, phone, region, user_id, created_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newClient.id,
+        newClient.firstName,
+        newClient.lastName,
+        newClient.email,
+        newClient.phone,
+        newClient.region,
+        newClient.userId,
+        newClient.createdAt
+      ]
+    );
+
     return newClient;
   }
 
   findClientByUserId(userId: string): Client | undefined {
-    return this.getClients().find(c => c.userId === userId);
+    const client = this.sqliteService.queryOne<Client>(
+      `SELECT
+         id,
+         first_name AS firstName,
+         last_name AS lastName,
+         email,
+         phone,
+         region,
+         user_id AS userId,
+         created_at AS createdAt
+       FROM clients
+       WHERE user_id = ?
+       LIMIT 1`,
+      [userId]
+    );
+
+    return client ?? undefined;
   }
 
   findClientById(id: string): Client | undefined {
-    return this.getClients().find(c => c.id === id);
+    const client = this.sqliteService.queryOne<Client>(
+      `SELECT
+         id,
+         first_name AS firstName,
+         last_name AS lastName,
+         email,
+         phone,
+         region,
+         user_id AS userId,
+         created_at AS createdAt
+       FROM clients
+       WHERE id = ?
+       LIMIT 1`,
+      [id]
+    );
+
+    return client ?? undefined;
   }
 
   findClientByEmail(email: string): Client | undefined {
-    return this.getClients().find(c => c.email.toLowerCase() === email.toLowerCase());
+    const client = this.sqliteService.queryOne<Client>(
+      `SELECT
+         id,
+         first_name AS firstName,
+         last_name AS lastName,
+         email,
+         phone,
+         region,
+         user_id AS userId,
+         created_at AS createdAt
+       FROM clients
+       WHERE lower(email) = lower(?)
+       LIMIT 1`,
+      [email]
+    );
+
+    return client ?? undefined;
   }
 
   getAllClients(): Client[] {
@@ -189,12 +442,42 @@ export class StorageService {
 
   // Purchases
   getPurchases(): Purchase[] {
-    const data = localStorage.getItem(KEYS.PURCHASES);
-    return data ? JSON.parse(data) : [];
+    return this.sqliteService.query<Purchase>(`
+      SELECT
+        id,
+        client_id AS clientId,
+        restaurant_id AS restaurantId,
+        amount,
+        points_earned AS pointsEarned,
+        points_used AS pointsUsed,
+        description,
+        date
+      FROM purchases
+      ORDER BY date DESC
+    `);
   }
 
   savePurchases(purchases: Purchase[]) {
-    localStorage.setItem(KEYS.PURCHASES, JSON.stringify(purchases));
+    this.sqliteService.transaction(() => {
+      this.sqliteService.run('DELETE FROM purchases');
+      purchases.forEach((purchase) => {
+        this.sqliteService.run(
+          `INSERT INTO purchases (
+            id, client_id, restaurant_id, amount, points_earned, points_used, description, date
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+          [
+            purchase.id,
+            purchase.clientId,
+            purchase.restaurantId,
+            purchase.amount,
+            purchase.pointsEarned,
+            purchase.pointsUsed,
+            purchase.description,
+            purchase.date
+          ]
+        );
+      });
+    });
   }
 
   addPurchase(purchase: Omit<Purchase, 'id' | 'date'>): Purchase {
@@ -204,86 +487,222 @@ export class StorageService {
       id: this.generateId(),
       date: new Date().toISOString()
     };
-    purchases.push(newPurchase);
-    this.savePurchases(purchases);
+
+    this.sqliteService.run(
+      `INSERT INTO purchases (
+        id, client_id, restaurant_id, amount, points_earned, points_used, description, date
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      [
+        newPurchase.id,
+        newPurchase.clientId,
+        newPurchase.restaurantId,
+        newPurchase.amount,
+        newPurchase.pointsEarned,
+        newPurchase.pointsUsed,
+        newPurchase.description,
+        newPurchase.date
+      ]
+    );
+
     return newPurchase;
   }
 
   getPurchasesByClient(clientId: string): Purchase[] {
-    return this.getPurchases().filter(p => p.clientId === clientId);
+    return this.sqliteService.query<Purchase>(
+      `SELECT
+         id,
+         client_id AS clientId,
+         restaurant_id AS restaurantId,
+         amount,
+         points_earned AS pointsEarned,
+         points_used AS pointsUsed,
+         description,
+         date
+       FROM purchases
+       WHERE client_id = ?
+       ORDER BY date DESC`,
+      [clientId]
+    );
   }
 
   getPurchasesByRestaurant(restaurantId: string): Purchase[] {
-    return this.getPurchases().filter(p => p.restaurantId === restaurantId);
+    return this.sqliteService.query<Purchase>(
+      `SELECT
+         id,
+         client_id AS clientId,
+         restaurant_id AS restaurantId,
+         amount,
+         points_earned AS pointsEarned,
+         points_used AS pointsUsed,
+         description,
+         date
+       FROM purchases
+       WHERE restaurant_id = ?
+       ORDER BY date DESC`,
+      [restaurantId]
+    );
   }
 
   getPurchasesByClientAndRestaurant(clientId: string, restaurantId: string): Purchase[] {
-    return this.getPurchases().filter(p => p.clientId === clientId && p.restaurantId === restaurantId);
+    return this.sqliteService.query<Purchase>(
+      `SELECT
+         id,
+         client_id AS clientId,
+         restaurant_id AS restaurantId,
+         amount,
+         points_earned AS pointsEarned,
+         points_used AS pointsUsed,
+         description,
+         date
+       FROM purchases
+       WHERE client_id = ? AND restaurant_id = ?
+       ORDER BY date DESC`,
+      [clientId, restaurantId]
+    );
   }
 
   // Points Balance
   getPointsBalances(): PointsBalance[] {
-    const data = localStorage.getItem(KEYS.POINTS);
-    return data ? JSON.parse(data) : [];
+    return this.sqliteService.query<PointsBalance>(`
+      SELECT
+        client_id AS clientId,
+        restaurant_id AS restaurantId,
+        points,
+        updated_at AS updatedAt
+      FROM points_balances
+    `);
   }
 
   savePointsBalances(balances: PointsBalance[]) {
-    localStorage.setItem(KEYS.POINTS, JSON.stringify(balances));
+    this.sqliteService.transaction(() => {
+      this.sqliteService.run('DELETE FROM points_balances');
+      balances.forEach((balance) => {
+        this.sqliteService.run(
+          `INSERT INTO points_balances (client_id, restaurant_id, points, updated_at) VALUES (?, ?, ?, ?)`,
+          [balance.clientId, balance.restaurantId, balance.points, balance.updatedAt]
+        );
+      });
+    });
   }
 
   getPointsBalance(clientId: string, restaurantId: string): number {
-    const balances = this.getPointsBalances();
-    const balance = balances.find(b => b.clientId === clientId && b.restaurantId === restaurantId);
-    return balance ? balance.points : 0;
+    const row = this.sqliteService.queryOne<{ points: number }>(
+      `SELECT points FROM points_balances WHERE client_id = ? AND restaurant_id = ? LIMIT 1`,
+      [clientId, restaurantId]
+    );
+
+    return row?.points ?? 0;
   }
 
   updatePointsBalance(clientId: string, restaurantId: string, pointsDelta: number): PointsBalance {
-    const balances = this.getPointsBalances();
-    const existingIndex = balances.findIndex(b => b.clientId === clientId && b.restaurantId === restaurantId);
-    if (existingIndex >= 0) {
-      balances[existingIndex].points += pointsDelta;
-      balances[existingIndex].updatedAt = new Date().toISOString();
-    } else {
-      balances.push({
+    const now = new Date().toISOString();
+
+    return this.sqliteService.transaction(() => {
+      const existing = this.sqliteService.queryOne<{ points: number }>(
+        `SELECT points FROM points_balances WHERE client_id = ? AND restaurant_id = ? LIMIT 1`,
+        [clientId, restaurantId]
+      );
+
+      if (existing) {
+        const nextPoints = Math.max(0, existing.points + pointsDelta);
+        this.sqliteService.run(
+          `UPDATE points_balances SET points = ?, updated_at = ? WHERE client_id = ? AND restaurant_id = ?`,
+          [nextPoints, now, clientId, restaurantId]
+        );
+      } else {
+        this.sqliteService.run(
+          `INSERT INTO points_balances (client_id, restaurant_id, points, updated_at) VALUES (?, ?, ?, ?)`,
+          [clientId, restaurantId, Math.max(0, pointsDelta), now]
+        );
+      }
+
+      return {
         clientId,
         restaurantId,
-        points: pointsDelta,
-        updatedAt: new Date().toISOString()
-      });
-    }
-
-    this.savePointsBalances(balances);
-    return balances[existingIndex >= 0 ? existingIndex : balances.length - 1];
+        points: this.getPointsBalance(clientId, restaurantId),
+        updatedAt: now
+      };
+    });
   }
 
   getAllPointsForClient(clientId: string): { restaurant: Restaurant; points: number }[] {
-    const balances = this.getPointsBalances().filter(b => b.clientId === clientId);
-    return balances.map(b => {
-      const restaurant = this.findRestaurantById(b.restaurantId);
-      return {
-        restaurant: restaurant!,
-        points: b.points
-      };
-    }).filter(item => item.restaurant);
+    const rows = this.sqliteService.query<(Restaurant & { points: number })>(
+      `SELECT
+         r.id,
+         r.name,
+         r.email,
+         r.phone,
+         r.address,
+         r.description,
+         r.user_id AS userId,
+         r.subscription_end_date AS subscriptionEndDate,
+         r.created_at AS createdAt,
+         pb.points AS points
+       FROM points_balances pb
+       INNER JOIN restaurants r ON r.id = pb.restaurant_id
+       WHERE pb.client_id = ?`,
+      [clientId]
+    );
+
+    return rows.map((row) => ({
+      restaurant: {
+        id: row.id,
+        name: row.name,
+        email: row.email,
+        phone: row.phone,
+        address: row.address,
+        description: row.description,
+        userId: row.userId,
+        subscriptionEndDate: row.subscriptionEndDate,
+        createdAt: row.createdAt
+      },
+      points: row.points
+    }));
   }
 
   // Session
   getCurrentUser(): User | null {
-    const data = localStorage.getItem(KEYS.CURRENT_USER);
-    return data ? JSON.parse(data) : null;
+    const user = this.sqliteService.queryOne<User>(
+      `SELECT
+         u.id,
+         u.email,
+         u.password,
+         u.role,
+         u.name,
+         u.created_at AS createdAt
+       FROM current_session s
+       INNER JOIN users u ON u.id = s.user_id
+       WHERE s.id = 1
+       LIMIT 1`
+    );
+
+    return user ?? null;
   }
 
   setCurrentUser(user: User | null) {
-    if (user) {
-      localStorage.setItem(KEYS.CURRENT_USER, JSON.stringify(user));
-    } else {
-      localStorage.removeItem(KEYS.CURRENT_USER);
-    }
+    const now = new Date().toISOString();
+    this.sqliteService.run(
+      `INSERT INTO current_session (id, user_id, updated_at)
+       VALUES (1, ?, ?)
+       ON CONFLICT(id) DO UPDATE SET user_id = excluded.user_id, updated_at = excluded.updated_at`,
+      [user?.id ?? null, now]
+    );
   }
 
   // Reset all data (pour les tests)
-  resetAllData() {
-    Object.values(KEYS).forEach(key => localStorage.removeItem(key));
-    this.initializeData();
+  async resetAllData(): Promise<void> {
+    await this.initializeData();
+
+    this.sqliteService.transaction(() => {
+      this.sqliteService.run('DELETE FROM purchases');
+      this.sqliteService.run('DELETE FROM points_balances');
+      this.sqliteService.run('DELETE FROM restaurants');
+      this.sqliteService.run('DELETE FROM clients');
+      this.sqliteService.run('DELETE FROM current_session');
+      this.sqliteService.run('DELETE FROM users');
+      this.sqliteService.run('DELETE FROM healthcheck');
+    });
+
+    await this.initializeData();
   }
 }

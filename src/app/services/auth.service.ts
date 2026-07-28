@@ -1,13 +1,13 @@
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import type { User, UserRole } from '../types';
-import { StorageService } from './storage.service';
+import { StorageService } from './api-storage.service';
 
 export interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  logout: () => void;
+  logout: () => Promise<void>;
   register: (email: string, password: string, name: string, role: UserRole) => Promise<{ success: boolean; error?: string; user?: User }>;
 }
 
@@ -22,12 +22,12 @@ export class AuthService {
   public isAuthenticated$ = this.isAuthenticatedSubject.asObservable();
 
   constructor(private storageService: StorageService) {
-    this.initializeAuth();
+    void this.initializeAuth();
   }
 
-  private initializeAuth() {
-    this.storageService.initializeData();
-    const currentUser = this.storageService.getCurrentUser();
+  private async initializeAuth() {
+    await this.storageService.initializeData();
+    const currentUser = await this.storageService.getCurrentUser();
     if (currentUser) {
       this.userSubject.next(currentUser);
       this.isAuthenticatedSubject.next(true);
@@ -35,26 +35,22 @@ export class AuthService {
   }
 
   async login(email: string, password: string): Promise<{ success: boolean; error?: string }> {
-    const foundUser = this.storageService.findUserByEmail(email);
-
-    if (!foundUser) {
-      return { success: false, error: 'Email ou mot de passe incorrect' };
+    try {
+      const user = await this.storageService.login(email, password);
+      this.userSubject.next(user);
+      this.isAuthenticatedSubject.next(true);
+      await this.storageService.setCurrentUser(user);
+      return { success: true };
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Email ou mot de passe incorrect';
+      return { success: false, error: errorMsg };
     }
-
-    if (foundUser.password !== password) {
-      return { success: false, error: 'Email ou mot de passe incorrect' };
-    }
-
-    this.userSubject.next(foundUser);
-    this.isAuthenticatedSubject.next(true);
-    this.storageService.setCurrentUser(foundUser);
-    return { success: true };
   }
 
-  logout() {
+  async logout() {
     this.userSubject.next(null);
     this.isAuthenticatedSubject.next(false);
-    this.storageService.setCurrentUser(null);
+    await this.storageService.setCurrentUser(null);
   }
 
   async register(
@@ -63,13 +59,13 @@ export class AuthService {
     name: string,
     role: UserRole
   ): Promise<{ success: boolean; error?: string; user?: User }> {
-    const existingUser = this.storageService.findUserByEmail(email);
+    const existingUser = await this.storageService.findUserByEmail(email);
 
     if (existingUser) {
       return { success: false, error: 'Cet email est déjà utilisé' };
     }
 
-    const newUser = this.storageService.addUser({
+    const newUser = await this.storageService.addUser({
       email,
       password,
       name,

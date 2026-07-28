@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { StorageService } from '../../services/storage.service';
+import { StorageService } from '../../services/api-storage.service';
 import { User, Restaurant, Client, Purchase } from '../../types';
 
 @Component({
@@ -17,6 +17,8 @@ export class RestaurantDashboardComponent implements OnInit {
   restaurant: Restaurant | null = null;
   clients: Client[] = [];
   purchases: Purchase[] = [];
+  clientPointsMap: Record<string, number> = {};
+  clientNameMap: Record<string, string> = {};
   error = '';
   success = '';
   activeTab = 'clients';
@@ -54,34 +56,47 @@ export class RestaurantDashboardComponent implements OnInit {
     this.authService.user$.subscribe(user => {
       this.user = user;
       if (user) {
-        this.loadRestaurant();
+        void this.loadRestaurant();
       }
     });
   }
 
-  loadRestaurant() {
+  async loadRestaurant() {
     if (this.user) {
-      this.restaurant = this.storageService.findRestaurantByUserId(this.user.id) || null;
+      this.restaurant = await this.storageService.findRestaurantByUserId(this.user.id) || null;
       if (this.restaurant) {
-        this.loadData();
+        await this.loadData();
       }
     }
   }
 
-  loadData() {
+  async loadData() {
     if (this.restaurant) {
-      this.clients = this.storageService.getAllClients();
-      this.purchases = this.storageService.getPurchasesByRestaurant(this.restaurant.id);
+      this.clients = await this.storageService.getAllClients();
+      this.purchases = await this.storageService.getPurchasesByRestaurant(this.restaurant.id);
+      this.clientNameMap = this.clients.reduce((acc, client) => {
+        acc[client.id] = `${client.firstName} ${client.lastName}`;
+        return acc;
+      }, {} as Record<string, string>);
+
+      const entries = await Promise.all(
+        this.clients.map(async (client) => {
+          const points = await this.storageService.getPointsBalance(client.id, this.restaurant!.id);
+          return [client.id, points] as const;
+        })
+      );
+
+      this.clientPointsMap = Object.fromEntries(entries);
     }
   }
 
-  onSubmitClient() {
+  async onSubmitClient() {
     this.error = '';
     this.success = '';
 
     try {
       // Validation des emails dupliqués
-      const existingUser = this.storageService.findUserByEmail(this.clientEmail);
+      const existingUser = await this.storageService.findUserByEmail(this.clientEmail);
       if (this.isEditMode && this.editingClient) {
         // En mode édition, vérifier si l'email est déjà utilisé par un autre utilisateur
         if (existingUser && existingUser.id !== this.editingClient.userId) {
@@ -98,20 +113,20 @@ export class RestaurantDashboardComponent implements OnInit {
 
       if (this.isEditMode && this.editingClient) {
         // Mode édition
-        const user = this.storageService.findUserById(this.editingClient.userId);
+        const user = await this.storageService.findUserById(this.editingClient.userId);
         if (!user) {
           this.error = 'Utilisateur associé non trouvé';
           return;
         }
 
         // Mettre à jour l'utilisateur
-        this.storageService.updateUser(user.id, {
+        await this.storageService.updateUser(user.id, {
           email: this.clientEmail,
           name: `${this.clientFirstName} ${this.clientLastName}`
         });
 
         // Mettre à jour le client
-        this.storageService.updateClient(this.editingClient.id, {
+        await this.storageService.updateClient(this.editingClient.id, {
           firstName: this.clientFirstName,
           lastName: this.clientLastName,
           email: this.clientEmail,
@@ -121,7 +136,7 @@ export class RestaurantDashboardComponent implements OnInit {
 
         // Mettre à jour le mot de passe si fourni
         if (this.clientPassword.trim()) {
-          this.storageService.updateUser(user.id, {
+          await this.storageService.updateUser(user.id, {
             password: this.clientPassword
           });
         }
@@ -130,7 +145,7 @@ export class RestaurantDashboardComponent implements OnInit {
       } else {
         // Mode création
         // Create user client
-        const userResult = this.storageService.addUser({
+        const userResult = await this.storageService.addUser({
           email: this.clientEmail,
           password: this.clientPassword,
           name: `${this.clientFirstName} ${this.clientLastName}`,
@@ -138,7 +153,7 @@ export class RestaurantDashboardComponent implements OnInit {
         });
 
         // Create client
-        this.storageService.addClient({
+        await this.storageService.addClient({
           firstName: this.clientFirstName,
           lastName: this.clientLastName,
           email: this.clientEmail,
@@ -150,7 +165,7 @@ export class RestaurantDashboardComponent implements OnInit {
         this.success = 'Client créé avec succès !';
       }
 
-      this.loadData();
+      await this.loadData();
       this.resetClientForm();
       this.isClientDialogOpen = false;
     } catch (err) {
@@ -193,8 +208,8 @@ export class RestaurantDashboardComponent implements OnInit {
     this.isClientDialogOpen = false;
   }
 
-  searchClient() {
-    const client = this.storageService.findClientByEmail(this.searchEmail);
+  async searchClient() {
+    const client = await this.storageService.findClientByEmail(this.searchEmail);
     if (client) {
       this.selectedClient = client;
       this.error = '';
@@ -204,7 +219,7 @@ export class RestaurantDashboardComponent implements OnInit {
     }
   }
 
-  handleAddPoints() {
+  async handleAddPoints() {
     this.error = '';
     this.success = '';
 
@@ -219,14 +234,14 @@ export class RestaurantDashboardComponent implements OnInit {
       const used = parseInt(this.pointsToUse) || 0;
 
       // Check if client has enough points
-      const currentBalance = this.storageService.getPointsBalance(this.selectedClient.id, this.restaurant.id);
+      const currentBalance = await this.storageService.getPointsBalance(this.selectedClient.id, this.restaurant.id);
       if (used > currentBalance) {
         this.error = `Le client n'a que ${currentBalance} points disponibles`;
         return;
       }
 
       // Create purchase
-      this.storageService.addPurchase({
+      await this.storageService.addPurchase({
         clientId: this.selectedClient.id,
         restaurantId: this.restaurant.id,
         amount,
@@ -236,10 +251,10 @@ export class RestaurantDashboardComponent implements OnInit {
       });
 
       // Update points
-      this.storageService.updatePointsBalance(this.selectedClient.id, this.restaurant.id, earned - used);
+      await this.storageService.updatePointsBalance(this.selectedClient.id, this.restaurant.id, earned - used);
 
       this.success = `Points mis à jour ! ${earned} ajoutés, ${used} utilisés`;
-      this.loadData();
+      await this.loadData();
       this.resetPointsForm();
     } catch (err) {
       this.error = 'Erreur lors de l\'attribution des points';
@@ -257,12 +272,11 @@ export class RestaurantDashboardComponent implements OnInit {
 
   getClientPoints(clientId: string): number {
     if (!this.restaurant) return 0;
-    return this.storageService.getPointsBalance(clientId, this.restaurant.id);
+    return this.clientPointsMap[clientId] ?? 0;
   }
 
   getClientName(clientId: string): string {
-    const client = this.storageService.findClientById(clientId);
-    return client ? `${client.firstName} ${client.lastName}` : 'Inconnu';
+    return this.clientNameMap[clientId] ?? 'Inconnu';
   }
 
   getTotalPointsEarned(): number {
@@ -303,8 +317,8 @@ export class RestaurantDashboardComponent implements OnInit {
     return parseInt(value) || 0;
   }
 
-  logout() {
-    this.authService.logout();
+  async logout() {
+    await this.authService.logout();
   }
 
   setActiveTab(tab: string) {

@@ -2,7 +2,7 @@ import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
-import { StorageService } from '../../services/storage.service';
+import { StorageService } from '../../services/api-storage.service';
 import { Restaurant, Client } from '../../types';
 
 @Component({
@@ -47,16 +47,16 @@ export class AdminDashboardComponent implements OnInit {
   ) {}
 
   ngOnInit() {
-    this.loadRestaurants();
-    this.loadClients();
+    void this.loadRestaurants();
+    void this.loadClients();
   }
 
-  loadRestaurants() {
-    this.restaurants = this.storageService.getRestaurants();
+  async loadRestaurants() {
+    this.restaurants = await this.storageService.getRestaurants();
   }
 
-  loadClients() {
-    this.clients = this.storageService.getClients();
+  async loadClients() {
+    this.clients = await this.storageService.getClients();
   }
 
   // Pagination getters
@@ -131,12 +131,12 @@ export class AdminDashboardComponent implements OnInit {
     return endDate < today;
   }
 
-  onSubmit() {
+  async onSubmit() {
     this.error = '';
     this.success = '';
 
     // Validation des emails dupliqués
-    const existingUser = this.storageService.findUserByEmail(this.email);
+    const existingUser = await this.storageService.findUserByEmail(this.email);
     if (this.isEditMode && this.editingRestaurant) {
       // En mode édition, vérifier si l'email est déjà utilisé par un autre utilisateur
       if (existingUser && existingUser.id !== this.editingRestaurant.userId) {
@@ -154,20 +154,20 @@ export class AdminDashboardComponent implements OnInit {
     try {
       if (this.isEditMode && this.editingRestaurant) {
         // Mode édition
-        const user = this.storageService.findUserById(this.editingRestaurant.userId);
+        const user = await this.storageService.findUserById(this.editingRestaurant.userId);
         if (!user) {
           this.error = 'Utilisateur associé non trouvé';
           return;
         }
 
         // Mettre à jour l'utilisateur
-        this.storageService.updateUser(user.id, {
+        await this.storageService.updateUser(user.id, {
           email: this.email,
           name: this.name
         });
 
         // Mettre à jour le restaurant
-        this.storageService.updateRestaurant(this.editingRestaurant.id, {
+        await this.storageService.updateRestaurant(this.editingRestaurant.id, {
           name: this.name,
           email: this.email,
           phone: this.phone,
@@ -178,7 +178,7 @@ export class AdminDashboardComponent implements OnInit {
 
         // Mettre à jour le mot de passe si fourni
         if (this.password.trim()) {
-          this.storageService.updateUser(user.id, {
+          await this.storageService.updateUser(user.id, {
             password: this.password
           });
         }
@@ -187,7 +187,7 @@ export class AdminDashboardComponent implements OnInit {
       } else {
         // Mode création
         // Créer l'utilisateur restaurant
-        const userResult = this.storageService.addUser({
+        const userResult = await this.storageService.addUser({
           email: this.email,
           password: this.password,
           name: this.name,
@@ -195,7 +195,7 @@ export class AdminDashboardComponent implements OnInit {
         });
 
         // Créer le restaurant
-        this.storageService.addRestaurant({
+        await this.storageService.addRestaurant({
           name: this.name,
           email: this.email,
           phone: this.phone,
@@ -208,7 +208,7 @@ export class AdminDashboardComponent implements OnInit {
         this.success = 'Restaurant créé avec succès !';
       }
 
-      this.loadRestaurants();
+      await this.loadRestaurants();
       this.resetForm();
       this.isDialogOpen = false;
     } catch (err) {
@@ -263,14 +263,14 @@ export class AdminDashboardComponent implements OnInit {
     this.errorPopupMessage = '';
   }
 
-  deleteRestaurant(id: string) {
+  async deleteRestaurant(id: string) {
     if (confirm('Êtes-vous sûr de vouloir supprimer ce restaurant ?')) {
-      this.storageService.deleteRestaurant(id);
-      this.loadRestaurants();
+      await this.storageService.deleteRestaurant(id);
+      await this.loadRestaurants();
     }
   }
 
-  logout() {
-    this.authService.logout();
+  async logout() {
+    await this.authService.logout();
   }
 }
