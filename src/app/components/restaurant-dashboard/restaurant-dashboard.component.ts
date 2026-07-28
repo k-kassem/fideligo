@@ -22,9 +22,10 @@ export class RestaurantDashboardComponent implements OnInit {
   error = '';
   success = '';
   activeTab = 'clients';
+  pointsPerEuroInput = 1;
 
-  // Taux de conversion: 1 point = 0.10€
-  readonly POINTS_TO_EURO_RATE = 0.10;
+  // Taux de conversion de la valeur d'un point: 1 point = 0.10€
+  readonly POINTS_TO_EURO_VALUE = 0.10;
 
   // Client creation form
   isClientDialogOpen = false;
@@ -65,6 +66,7 @@ export class RestaurantDashboardComponent implements OnInit {
     if (this.user) {
       this.restaurant = await this.storageService.findRestaurantByUserId(this.user.id) || null;
       if (this.restaurant) {
+        this.pointsPerEuroInput = this.restaurant.pointsPerEuro ?? 1;
         await this.loadData();
       }
     }
@@ -230,8 +232,13 @@ export class RestaurantDashboardComponent implements OnInit {
 
     try {
       const amount = parseFloat(this.purchaseAmount) || 0;
-      const earned = parseInt(this.pointsToAdd) || 0;
+      const bonusPoints = parseInt(this.pointsToAdd) || 0;
       const used = parseInt(this.pointsToUse) || 0;
+
+      if (amount <= 0) {
+        this.error = 'Le montant de l\'achat doit être supérieur à 0';
+        return;
+      }
 
       // Check if client has enough points
       const currentBalance = await this.storageService.getPointsBalance(this.selectedClient.id, this.restaurant.id);
@@ -240,24 +247,45 @@ export class RestaurantDashboardComponent implements OnInit {
         return;
       }
 
-      // Create purchase
-      await this.storageService.addPurchase({
+      // Create purchase (points calculés automatiquement selon le barème du restaurant)
+      const purchase = await this.storageService.addPurchase({
         clientId: this.selectedClient.id,
         restaurantId: this.restaurant.id,
         amount,
-        pointsEarned: earned,
         pointsUsed: used,
+        bonusPoints,
         description: this.purchaseDescription || 'Achat'
       });
 
-      // Update points
-      await this.storageService.updatePointsBalance(this.selectedClient.id, this.restaurant.id, earned - used);
-
-      this.success = `Points mis à jour ! ${earned} ajoutés, ${used} utilisés`;
+      this.success = `Achat enregistré ! ${purchase.pointsEarned} points gagnés, ${used} points utilisés`;
       await this.loadData();
       this.resetPointsForm();
     } catch (err) {
       this.error = 'Erreur lors de l\'attribution des points';
+    }
+  }
+
+  async savePointsPerEuro() {
+    if (!this.restaurant) return;
+
+    const nextValue = Number(this.pointsPerEuroInput);
+    if (Number.isNaN(nextValue) || nextValue < 0) {
+      this.error = 'Le barème points/€ doit être un nombre positif';
+      return;
+    }
+
+    this.error = '';
+    this.success = '';
+
+    try {
+      const updated = await this.storageService.updateRestaurant(this.restaurant.id, { pointsPerEuro: nextValue });
+      if (updated) {
+        this.restaurant = updated;
+        this.pointsPerEuroInput = updated.pointsPerEuro;
+      }
+      this.success = 'Barème points/€ mis à jour avec succès';
+    } catch {
+      this.error = 'Erreur lors de la mise à jour du barème points/€';
     }
   }
 
@@ -285,12 +313,12 @@ export class RestaurantDashboardComponent implements OnInit {
 
   // Convertir les points en euros
   pointsToEuros(points: number): number {
-    return points * this.POINTS_TO_EURO_RATE;
+    return points * this.POINTS_TO_EURO_VALUE;
   }
 
   // Convertir les euros en points
   eurosToPoints(euros: number): number {
-    return Math.floor(euros / this.POINTS_TO_EURO_RATE);
+    return Math.floor(euros / this.POINTS_TO_EURO_VALUE);
   }
 
   // Calculer le montant restant après utilisation des points

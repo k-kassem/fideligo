@@ -35,6 +35,7 @@ export class AdminDashboardComponent implements OnInit {
   phone = '';
   address = '';
   description = '';
+  pointsPerEuro = 1;
   subscriptionEndDate = '';
 
   // Edit mode
@@ -173,6 +174,7 @@ export class AdminDashboardComponent implements OnInit {
           phone: this.phone,
           address: this.address,
           description: this.description,
+          pointsPerEuro: this.pointsPerEuro,
           subscriptionEndDate: this.subscriptionEndDate || undefined
         });
 
@@ -202,6 +204,7 @@ export class AdminDashboardComponent implements OnInit {
           address: this.address,
           description: this.description,
           userId: userResult.id,
+          pointsPerEuro: this.pointsPerEuro,
           subscriptionEndDate: this.subscriptionEndDate || undefined
         });
 
@@ -223,6 +226,7 @@ export class AdminDashboardComponent implements OnInit {
     this.phone = '';
     this.address = '';
     this.description = '';
+    this.pointsPerEuro = 1;
     this.subscriptionEndDate = '';
     this.isEditMode = false;
     this.editingRestaurant = null;
@@ -238,6 +242,7 @@ export class AdminDashboardComponent implements OnInit {
     this.phone = restaurant.phone || '';
     this.address = restaurant.address || '';
     this.description = restaurant.description || '';
+    this.pointsPerEuro = restaurant.pointsPerEuro ?? 1;
     this.subscriptionEndDate = restaurant.subscriptionEndDate || '';
 
     // Le mot de passe n'est pas pré-rempli pour des raisons de sécurité
