@@ -3,11 +3,38 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
-require('dotenv').config();
+const dotenv = require('dotenv');
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+
+  const raw = fs.readFileSync(filePath);
+  let content;
+
+  const isUtf16Le = raw.length >= 2 && raw[0] === 0xff && raw[1] === 0xfe;
+  const isUtf16Be = raw.length >= 2 && raw[0] === 0xfe && raw[1] === 0xff;
+
+  if (isUtf16Le || isUtf16Be) {
+    // PowerShell can create UTF-16 files by default.
+    content = raw.toString('utf16le');
+  } else {
+    content = raw.toString('utf8');
+  }
+
+  const parsed = dotenv.parse(content);
+  for (const [key, value] of Object.entries(parsed)) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile(path.join(process.cwd(), 'smtp.env'));
+loadEnvFile(path.join(process.cwd(), '.env'));
 
 const PORT = process.env.PORT || 3000;
 const DB_DIR = path.join(__dirname, 'data');
@@ -37,7 +64,7 @@ function createMailTransporter() {
   const host = process.env.SMTP_HOST;
   const port = Number(process.env.SMTP_PORT || 587);
   const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const pass = process.env.SMTP_PASS?.replace(/\s+/g, '');
 
   if (!host || !user || !pass) {
     return null;
