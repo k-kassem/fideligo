@@ -490,7 +490,7 @@ async function bootstrap() {
     if (existing) {
       return res.status(409).json({ error: 'Ce ticket a déjà été soumis pour ce restaurant' });
     }
-    const id = uuidv4();
+    const id = crypto.randomUUID();
     const now = new Date().toISOString();
     await db.run(
       'INSERT INTO tickets (id, client_id, restaurant_id, ticket_number, amount, purchase_date, photo_url, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, \'PENDING\', ?)',
@@ -521,7 +521,7 @@ async function bootstrap() {
     const pointsEarned = Math.floor(ticket.amount * (restaurant?.points_per_euro ?? 1));
 
     // Create purchase record
-    const purchaseId = uuidv4();
+    const purchaseId = crypto.randomUUID();
     const now = new Date().toISOString();
     await db.run(
       'INSERT INTO purchases (id, client_id, restaurant_id, amount, points_earned, points_used, description, date) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
