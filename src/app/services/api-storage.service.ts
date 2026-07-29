@@ -1,7 +1,7 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { firstValueFrom } from 'rxjs';
-import type { User, Restaurant, Client, Purchase, PointsBalance } from '../types';
+import type { User, Restaurant, Client, Purchase, PointsBalance, Ticket, TicketStatus } from '../types';
 
 type PointsByRestaurant = { restaurant: Restaurant; points: number };
 type CreatePurchasePayload = Omit<Purchase, 'id' | 'date' | 'pointsEarned'> & { pointsEarned?: number; bonusPoints?: number };
@@ -150,6 +150,26 @@ export class StorageService {
 
   async getAllPointsForClient(clientId: string): Promise<PointsByRestaurant[]> {
     return firstValueFrom(this.http.get<PointsByRestaurant[]>(`${this.apiBase}/points/client/${clientId}`));
+  }
+
+  async getTickets(params: { clientId?: string; restaurantId?: string; status?: TicketStatus } = {}): Promise<Ticket[]> {
+    const query = new URLSearchParams();
+    if (params.clientId) query.set('clientId', params.clientId);
+    if (params.restaurantId) query.set('restaurantId', params.restaurantId);
+    if (params.status) query.set('status', params.status);
+    return firstValueFrom(this.http.get<Ticket[]>(`${this.apiBase}/tickets?${query.toString()}`));
+  }
+
+  async addTicket(ticket: { clientId: string; restaurantId: string; ticketNumber: string; amount: number; purchaseDate: string; photoUrl?: string }): Promise<Ticket> {
+    return firstValueFrom(this.http.post<Ticket>(`${this.apiBase}/tickets`, ticket));
+  }
+
+  async approveTicket(id: string): Promise<{ ticket: Ticket; pointsEarned: number }> {
+    return firstValueFrom(this.http.patch<{ ticket: Ticket; pointsEarned: number }>(`${this.apiBase}/tickets/${id}/approve`, {}));
+  }
+
+  async rejectTicket(id: string, reason?: string): Promise<Ticket> {
+    return firstValueFrom(this.http.patch<Ticket>(`${this.apiBase}/tickets/${id}/reject`, { reason }));
   }
 
   async getCurrentUser(): Promise<User | null> {

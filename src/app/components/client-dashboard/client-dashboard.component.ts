@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { StorageService } from '../../services/api-storage.service';
-import { User, Client, Purchase, Restaurant } from '../../types';
+import { User, Client, Purchase, Restaurant, Ticket } from '../../types';
 
 interface PointsInfo {
   restaurant: Restaurant;
@@ -21,10 +21,16 @@ export class ClientDashboardComponent implements OnInit {
   user: User | null = null;
   client: Client | null = null;
   purchases: Purchase[] = [];
+  tickets: Ticket[] = [];
   pointsInfo: PointsInfo[] = [];
   restaurants: Restaurant[] = [];
   restaurantNameMap: Record<string, string> = {};
   activeTab = 'overview';
+
+  // History filter & pagination
+  historyFilterRestaurantId = '';
+  historyPage = 1;
+  readonly historyPageSize = 10;
 
   // Modal state
   showAddPurchaseModal = false;
@@ -36,6 +42,19 @@ export class ClientDashboardComponent implements OnInit {
     description: '',
     usePoints: false,
     pointsToUse: 0
+  };
+
+  // Ticket form state
+  showTicketModal = false;
+  ticketLoading = false;
+  ticketError = '';
+  ticketSuccess = '';
+  newTicket = {
+    restaurantId: '',
+    ticketNumber: '',
+    amount: null as number | null,
+    purchaseDate: '',
+    photoUrl: ''
   };
 
   constructor(
@@ -63,10 +82,11 @@ export class ClientDashboardComponent implements OnInit {
 
   async loadData() {
     if (this.client) {
-      [this.purchases, this.pointsInfo, this.restaurants] = await Promise.all([
+      [this.purchases, this.pointsInfo, this.restaurants, this.tickets] = await Promise.all([
         this.storageService.getPurchasesByClient(this.client.id),
         this.storageService.getAllPointsForClient(this.client.id),
-        this.storageService.getRestaurants()
+        this.storageService.getRestaurants(),
+        this.storageService.getTickets({ clientId: this.client.id })
       ]);
       this.restaurantNameMap = this.restaurants.reduce((acc, r) => {
         acc[r.id] = r.name;
@@ -190,6 +210,66 @@ export class ClientDashboardComponent implements OnInit {
 
   setActiveTab(tab: string) {
     this.activeTab = tab;
+  }
+
+  openTicketModal() {
+    this.newTicket = { restaurantId: '', ticketNumber: '', amount: null, purchaseDate: '', photoUrl: '' };
+    this.ticketError = '';
+    this.ticketSuccess = '';
+    this.showTicketModal = true;
+  }
+
+  closeTicketModal() {
+    this.showTicketModal = false;
+  }
+
+  getTicketStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      PENDING: 'En attente',
+      APPROVED: 'Approuvé',
+      REJECTED: 'Rejeté',
+      POINTS_GRANTED: 'Points attribués'
+    };
+    return labels[status] ?? status;
+  }
+
+  getTicketStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      APPROVED: 'bg-blue-100 text-blue-800',
+      REJECTED: 'bg-red-100 text-red-800',
+      POINTS_GRANTED: 'bg-green-100 text-green-800'
+    };
+    return classes[status] ?? 'bg-gray-100 text-gray-800';
+  }
+
+  async submitTicket() {
+    if (!this.client) return;
+    if (!this.newTicket.restaurantId) { this.ticketError = 'Veuillez sélectionner un restaurant.'; return; }
+    if (!this.newTicket.ticketNumber.trim()) { this.ticketError = 'Veuillez entrer le numéro de ticket.'; return; }
+    if (!this.newTicket.amount || this.newTicket.amount <= 0) { this.ticketError = 'Veuillez entrer un montant valide.'; return; }
+    if (!this.newTicket.purchaseDate) { this.ticketError = 'Veuillez sélectionner la date d\'achat.'; return; }
+
+    this.ticketLoading = true;
+    this.ticketError = '';
+    try {
+      await this.storageService.addTicket({
+        clientId: this.client.id,
+        restaurantId: this.newTicket.restaurantId,
+        ticketNumber: this.newTicket.ticketNumber.trim(),
+        amount: this.newTicket.amount,
+        purchaseDate: this.newTicket.purchaseDate,
+        photoUrl: this.newTicket.photoUrl || undefined
+      });
+      await this.loadData();
+      this.closeTicketModal();
+      this.activeTab = 'tickets';
+    } catch (err: unknown) {
+      const error = err as { error?: { error?: string } };
+      this.ticketError = error?.error?.error ?? 'Une erreur est survenue. Veuillez réessayer.';
+    } finally {
+      this.ticketLoading = false;
+    }
   }
 
   readonly Math = Math;
