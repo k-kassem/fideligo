@@ -37,6 +37,7 @@ server/data/
 # Environment
 .env
 .env.local
+smtp.env
 
 # OS
 .DS_Store
