@@ -9,6 +9,36 @@ const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
 const nodemailer = require('nodemailer');
 
+const ENCRYPTED_VALUE_PREFIX = 'enc:v1:';
+
+function deriveEncryptionKey(secret) {
+  return crypto.createHash('sha256').update(secret).digest();
+}
+
+function decryptIfNeeded(value, secret) {
+  if (!value) return value;
+  if (!value.startsWith(ENCRYPTED_VALUE_PREFIX)) return value;
+
+  if (!secret) {
+    throw new Error('SMTP_CONFIG_KEY est requis pour déchiffrer la configuration SMTP chiffrée.');
+  }
+
+  const parts = value.split(':');
+  if (parts.length !== 5 || parts[0] !== 'enc' || parts[1] !== 'v1') {
+    throw new Error('Format de valeur chiffrée invalide.');
+  }
+
+  const iv = Buffer.from(parts[2], 'base64');
+  const authTag = Buffer.from(parts[3], 'base64');
+  const encrypted = Buffer.from(parts[4], 'base64');
+
+  const decipher = crypto.createDecipheriv('aes-256-gcm', deriveEncryptionKey(secret), iv);
+  decipher.setAuthTag(authTag);
+
+  const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
+  return decrypted.toString('utf8');
+}
+
 function loadEnvFile(filePath) {
   if (!fs.existsSync(filePath)) return;
 
@@ -35,12 +65,35 @@ function loadEnvFile(filePath) {
 
 loadEnvFile(path.join(process.cwd(), 'smtp.env'));
 loadEnvFile(path.join(process.cwd(), '.env'));
+loadEnvFile(path.join(process.cwd(), '.env.local'));
 
 const PORT = process.env.PORT || 3000;
 const DB_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DB_DIR, 'loyality.db');
 
-const MAIL_FROM = process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@fidelite.local';
+function resolveSmtpConfig() {
+  const configKey = process.env.SMTP_CONFIG_KEY || process.env.SMTP_ENCRYPTION_KEY;
+
+  const host = decryptIfNeeded(process.env.SMTP_HOST_ENC || process.env.SMTP_HOST, configKey);
+  const portRaw = decryptIfNeeded(process.env.SMTP_PORT_ENC || process.env.SMTP_PORT, configKey);
+  const user = decryptIfNeeded(process.env.SMTP_USER_ENC || process.env.SMTP_USER, configKey);
+  const passRaw = decryptIfNeeded(process.env.SMTP_PASS_ENC || process.env.SMTP_PASS, configKey);
+  const secureRaw = decryptIfNeeded(process.env.SMTP_SECURE_ENC || process.env.SMTP_SECURE, configKey);
+  const mailFrom = decryptIfNeeded(process.env.MAIL_FROM_ENC || process.env.MAIL_FROM, configKey);
+
+  const port = Number(portRaw || 587);
+  const pass = passRaw?.replace(/\s+/g, '');
+  const secure = String(secureRaw).toLowerCase() === 'true' || port === 465;
+
+  return {
+    host,
+    port,
+    user,
+    pass,
+    secure,
+    mailFrom: mailFrom || user || 'no-reply@fidelite.local'
+  };
+}
 
 const INITIAL_ADMIN = {
   email: 'admin@fidelite.com',
@@ -61,10 +114,7 @@ function generateVerificationCode() {
 }
 
 function createMailTransporter() {
-  const host = process.env.SMTP_HOST;
-  const port = Number(process.env.SMTP_PORT || 587);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS?.replace(/\s+/g, '');
+  const { host, port, user, pass, secure } = resolveSmtpConfig();
 
   if (!host || !user || !pass) {
     return null;
@@ -73,7 +123,7 @@ function createMailTransporter() {
   return nodemailer.createTransport({
     host,
     port,
-    secure: process.env.SMTP_SECURE === 'true' || port === 465,
+    secure,
     auth: {
       user,
       pass
@@ -83,13 +133,14 @@ function createMailTransporter() {
 
 async function sendVerificationEmail(email, code) {
   const transporter = createMailTransporter();
+  const { mailFrom } = resolveSmtpConfig();
 
   if (!transporter) {
     throw new Error('Configuration SMTP manquante (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS).');
   }
 
   await transporter.sendMail({
-    from: MAIL_FROM,
+    from: mailFrom,
     to: email,
     subject: 'Votre code de vérification Fidelité',
     text: `Bonjour,\n\nVotre code de vérification est : ${code}\n\nCe code expire dans 10 minutes.\n\nFidelité`,
