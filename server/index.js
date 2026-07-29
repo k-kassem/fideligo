@@ -3,13 +3,44 @@ const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
 const crypto = require('crypto');
+const dotenv = require('dotenv');
 const sqlite3 = require('sqlite3');
 const { open } = require('sqlite');
 const bcrypt = require('bcryptjs');
+const nodemailer = require('nodemailer');
+
+function loadEnvFile(filePath) {
+  if (!fs.existsSync(filePath)) return;
+
+  const raw = fs.readFileSync(filePath);
+  let content;
+
+  const isUtf16Le = raw.length >= 2 && raw[0] === 0xff && raw[1] === 0xfe;
+  const isUtf16Be = raw.length >= 2 && raw[0] === 0xfe && raw[1] === 0xff;
+
+  if (isUtf16Le || isUtf16Be) {
+    // PowerShell can create UTF-16 files by default.
+    content = raw.toString('utf16le');
+  } else {
+    content = raw.toString('utf8');
+  }
+
+  const parsed = dotenv.parse(content);
+  for (const [key, value] of Object.entries(parsed)) {
+    if (process.env[key] === undefined) {
+      process.env[key] = value;
+    }
+  }
+}
+
+loadEnvFile(path.join(process.cwd(), 'smtp.env'));
+loadEnvFile(path.join(process.cwd(), '.env'));
 
 const PORT = process.env.PORT || 3000;
 const DB_DIR = path.join(__dirname, 'data');
 const DB_PATH = path.join(DB_DIR, 'loyality.db');
+
+const MAIL_FROM = process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@fidelite.local';
 
 const INITIAL_ADMIN = {
   email: 'admin@fidelite.com',
@@ -23,6 +54,53 @@ function generateId() {
 
 function nowIso() {
   return new Date().toISOString();
+}
+
+function generateVerificationCode() {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
+function createMailTransporter() {
+  const host = process.env.SMTP_HOST;
+  const port = Number(process.env.SMTP_PORT || 587);
+  const user = process.env.SMTP_USER;
+  const pass = process.env.SMTP_PASS?.replace(/\s+/g, '');
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  return nodemailer.createTransport({
+    host,
+    port,
+    secure: process.env.SMTP_SECURE === 'true' || port === 465,
+    auth: {
+      user,
+      pass
+    }
+  });
+}
+
+async function sendVerificationEmail(email, code) {
+  const transporter = createMailTransporter();
+
+  if (!transporter) {
+    throw new Error('Configuration SMTP manquante (SMTP_HOST, SMTP_PORT, SMTP_USER, SMTP_PASS).');
+  }
+
+  await transporter.sendMail({
+    from: MAIL_FROM,
+    to: email,
+    subject: 'Votre code de vérification Fidelité',
+    text: `Bonjour,\n\nVotre code de vérification est : ${code}\n\nCe code expire dans 10 minutes.\n\nFidelité`,
+    html: `
+      <p>Bonjour,</p>
+      <p>Votre code de vérification est :</p>
+      <p style="font-size:24px;font-weight:bold;letter-spacing:2px">${code}</p>
+      <p>Ce code expire dans <strong>10 minutes</strong>.</p>
+      <p>Fidelité</p>
+    `
+  });
 }
 
 async function hashPassword(password) {
@@ -42,6 +120,7 @@ function mapUser(row) {
     password: row.password,
     role: row.role,
     name: row.name,
+    isVerified: Number(row.is_verified ?? 1) === 1,
     createdAt: row.created_at
   };
 }
@@ -119,6 +198,7 @@ async function initDb() {
       password TEXT NOT NULL,
       role TEXT NOT NULL CHECK(role IN ('admin', 'restaurant', 'client')),
       name TEXT NOT NULL,
+      is_verified INTEGER NOT NULL DEFAULT 1 CHECK(is_verified IN (0, 1)),
       created_at TEXT NOT NULL
     );
 
@@ -183,6 +263,16 @@ async function initDb() {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS client_verification_codes (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      code TEXT NOT NULL,
+      expires_at TEXT NOT NULL,
+      created_at TEXT NOT NULL,
+      verified_at TEXT,
+      FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+    );
+
     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
     CREATE INDEX IF NOT EXISTS idx_restaurants_user_id ON restaurants(user_id);
     CREATE INDEX IF NOT EXISTS idx_clients_user_id ON clients(user_id);
@@ -190,12 +280,19 @@ async function initDb() {
     CREATE INDEX IF NOT EXISTS idx_purchases_restaurant_id ON purchases(restaurant_id);
     CREATE INDEX IF NOT EXISTS idx_points_balances_client_id ON points_balances(client_id);
     CREATE INDEX IF NOT EXISTS idx_points_balances_restaurant_id ON points_balances(restaurant_id);
+    CREATE INDEX IF NOT EXISTS idx_client_verif_user_id ON client_verification_codes(user_id);
   `);
 
   const restaurantColumns = await db.all('PRAGMA table_info(restaurants)');
   const hasPointsPerEuro = restaurantColumns.some((column) => column.name === 'points_per_euro');
   if (!hasPointsPerEuro) {
     await db.exec('ALTER TABLE restaurants ADD COLUMN points_per_euro REAL NOT NULL DEFAULT 1');
+  }
+
+  const userColumns = await db.all('PRAGMA table_info(users)');
+  const hasIsVerified = userColumns.some((column) => column.name === 'is_verified');
+  if (!hasIsVerified) {
+    await db.exec('ALTER TABLE users ADD COLUMN is_verified INTEGER NOT NULL DEFAULT 1');
   }
 
   const admin = await db.get('SELECT id FROM users WHERE email = ?', [INITIAL_ADMIN.email]);
@@ -277,7 +374,164 @@ async function bootstrap() {
       return res.status(401).json({ error: 'Email ou mot de passe incorrect' });
     }
 
+    if (user.role === 'client' && Number(user.is_verified ?? 1) !== 1) {
+      return res.status(403).json({ error: 'Compte non vérifié. Veuillez saisir le code reçu par email.' });
+    }
+
     res.json(mapUser(user));
+  }));
+
+  app.post('/api/auth/register-client', asyncHandler(async (req, res) => {
+    const { firstName, lastName, email, phone, region, password } = req.body;
+
+    if (!firstName || !lastName || !email || !phone || !region || !password) {
+      return res.status(400).json({ error: 'Données d\'inscription incomplètes' });
+    }
+
+    const existing = await db.get('SELECT id FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1', [email]);
+    if (existing) {
+      return res.status(409).json({ error: 'Cet email est déjà utilisé' });
+    }
+
+    const userId = generateId();
+    const clientId = generateId();
+    const createdAt = nowIso();
+    const hashedPassword = await hashPassword(password);
+    const code = generateVerificationCode();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await db.exec('BEGIN TRANSACTION');
+    try {
+      await db.run(
+        'INSERT INTO users (id, email, password, role, name, is_verified, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+        [userId, email, hashedPassword, 'client', `${firstName} ${lastName}`.trim(), 0, createdAt]
+      );
+
+      await db.run(
+        `INSERT INTO clients (id, first_name, last_name, email, phone, region, user_id, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [clientId, firstName, lastName, email, phone, region, userId, createdAt]
+      );
+
+      await db.run('DELETE FROM client_verification_codes WHERE user_id = ? AND verified_at IS NULL', [userId]);
+      await db.run(
+        `INSERT INTO client_verification_codes (id, user_id, code, expires_at, created_at, verified_at)
+         VALUES (?, ?, ?, ?, ?, NULL)`,
+        [generateId(), userId, code, expiresAt, createdAt]
+      );
+
+      await db.exec('COMMIT');
+    } catch (error) {
+      await db.exec('ROLLBACK');
+      throw error;
+    }
+
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (error) {
+      console.error(`[MAIL] Échec d'envoi du code de vérification à ${email}:`, error.message);
+      return res.status(500).json({
+        error: "Compte créé, mais l'envoi de l'email a échoué. Vérifiez la configuration SMTP puis cliquez sur 'Renvoyer le code'."
+      });
+    }
+
+    res.status(201).json({
+      ok: true,
+      email,
+      message: 'Compte créé. Un code de vérification a été envoyé par email.'
+    });
+  }));
+
+  app.post('/api/auth/verify-client', asyncHandler(async (req, res) => {
+    const { email, code } = req.body;
+
+    if (!email || !code) {
+      return res.status(400).json({ error: 'Email et code requis' });
+    }
+
+    const user = await db.get(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND role = ? LIMIT 1',
+      [email, 'client']
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'Compte client introuvable' });
+    }
+
+    const entry = await db.get(
+      `SELECT * FROM client_verification_codes
+       WHERE user_id = ? AND code = ? AND verified_at IS NULL
+       ORDER BY created_at DESC
+       LIMIT 1`,
+      [user.id, String(code).trim()]
+    );
+
+    if (!entry) {
+      return res.status(400).json({ error: 'Code invalide' });
+    }
+
+    if (new Date(entry.expires_at).getTime() < Date.now()) {
+      return res.status(400).json({ error: 'Code expiré. Veuillez demander un nouveau code.' });
+    }
+
+    const verifiedAt = nowIso();
+    await db.exec('BEGIN TRANSACTION');
+    try {
+      await db.run('UPDATE users SET is_verified = 1 WHERE id = ?', [user.id]);
+      await db.run('UPDATE client_verification_codes SET verified_at = ? WHERE id = ?', [verifiedAt, entry.id]);
+      await db.exec('COMMIT');
+    } catch (error) {
+      await db.exec('ROLLBACK');
+      throw error;
+    }
+
+    res.json({ ok: true, message: 'Compte vérifié avec succès. Vous pouvez vous connecter.' });
+  }));
+
+  app.post('/api/auth/resend-client-code', asyncHandler(async (req, res) => {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ error: 'Email requis' });
+    }
+
+    const user = await db.get(
+      'SELECT * FROM users WHERE LOWER(email) = LOWER(?) AND role = ? LIMIT 1',
+      [email, 'client']
+    );
+
+    if (!user) {
+      return res.status(404).json({ error: 'Compte client introuvable' });
+    }
+
+    if (Number(user.is_verified ?? 1) === 1) {
+      return res.status(400).json({ error: 'Ce compte est déjà vérifié' });
+    }
+
+    const code = generateVerificationCode();
+    const createdAt = nowIso();
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000).toISOString();
+
+    await db.run('DELETE FROM client_verification_codes WHERE user_id = ? AND verified_at IS NULL', [user.id]);
+    await db.run(
+      `INSERT INTO client_verification_codes (id, user_id, code, expires_at, created_at, verified_at)
+       VALUES (?, ?, ?, ?, ?, NULL)`,
+      [generateId(), user.id, code, expiresAt, createdAt]
+    );
+
+    try {
+      await sendVerificationEmail(email, code);
+    } catch (error) {
+      console.error(`[MAIL] Échec de renvoi du code à ${email}:`, error.message);
+      return res.status(500).json({
+        error: "Impossible d'envoyer l'email. Vérifiez la configuration SMTP."
+      });
+    }
+
+    res.json({
+      ok: true,
+      message: 'Un nouveau code a été envoyé par email.'
+    });
   }));
 
   app.get('/api/users', asyncHandler(async (_req, res) => {
