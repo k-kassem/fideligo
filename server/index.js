@@ -702,7 +702,11 @@ async function bootstrap() {
   }));
 
   app.delete('/api/clients/:id', asyncHandler(async (req, res) => {
+    const client = await db.get('SELECT * FROM clients WHERE id = ? LIMIT 1', [req.params.id]);
     await db.run('DELETE FROM clients WHERE id = ?', [req.params.id]);
+    if (client && client.user_id) {
+      await db.run('DELETE FROM users WHERE id = ?', [client.user_id]);
+    }
     res.json({ ok: true });
   }));
 
