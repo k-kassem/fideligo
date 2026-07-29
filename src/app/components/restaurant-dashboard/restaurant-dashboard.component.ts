@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AuthService } from '../../services/auth.service';
 import { StorageService } from '../../services/api-storage.service';
-import { User, Restaurant, Client, Purchase } from '../../types';
+import { User, Restaurant, Client, Purchase, Ticket } from '../../types';
 
 @Component({
   selector: 'app-restaurant-dashboard',
@@ -17,6 +17,7 @@ export class RestaurantDashboardComponent implements OnInit {
   restaurant: Restaurant | null = null;
   clients: Client[] = [];
   purchases: Purchase[] = [];
+  tickets: Ticket[] = [];
   clientPointsMap: Record<string, number> = {};
   clientNameMap: Record<string, string> = {};
   error = '';
@@ -76,8 +77,11 @@ export class RestaurantDashboardComponent implements OnInit {
 
   async loadData() {
     if (this.restaurant) {
-      this.clients = await this.storageService.getAllClients();
-      this.purchases = await this.storageService.getPurchasesByRestaurant(this.restaurant.id);
+      [this.clients, this.purchases, this.tickets] = await Promise.all([
+        this.storageService.getAllClients(),
+        this.storageService.getPurchasesByRestaurant(this.restaurant.id),
+        this.storageService.getTickets({ restaurantId: this.restaurant.id })
+      ]);
       this.clientNameMap = this.clients.reduce((acc, client) => {
         acc[client.id] = `${client.firstName} ${client.lastName}`;
         return acc;
@@ -381,7 +385,54 @@ export class RestaurantDashboardComponent implements OnInit {
     if (!subscriptionEndDate) return false;
     const endDate = new Date(subscriptionEndDate);
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Reset time to start of day for fair comparison
+    today.setHours(0, 0, 0, 0);
     return endDate < today;
   }
+
+  get pendingTickets(): Ticket[] {
+    return this.tickets.filter(t => t.status === 'PENDING');
+  }
+
+  getTicketStatusLabel(status: string): string {
+    const labels: Record<string, string> = {
+      PENDING: 'En attente',
+      APPROVED: 'Approuvé',
+      REJECTED: 'Rejeté',
+      POINTS_GRANTED: 'Points attribués'
+    };
+    return labels[status] ?? status;
+  }
+
+  getTicketStatusClass(status: string): string {
+    const classes: Record<string, string> = {
+      PENDING: 'bg-yellow-100 text-yellow-800',
+      APPROVED: 'bg-blue-100 text-blue-800',
+      REJECTED: 'bg-red-100 text-red-800',
+      POINTS_GRANTED: 'bg-green-100 text-green-800'
+    };
+    return classes[status] ?? 'bg-gray-100 text-gray-800';
+  }
+
+  async approveTicket(ticket: Ticket) {
+    try {
+      const result = await this.storageService.approveTicket(ticket.id);
+      this.success = `Ticket approuvé ! ${result.pointsEarned} points attribués à ${this.getClientName(ticket.clientId)}.`;
+      await this.loadData();
+    } catch {
+      this.error = 'Erreur lors de l\'approbation du ticket.';
+    }
+  }
+
+  async rejectTicket(ticket: Ticket) {
+    const reason = prompt('Raison du refus (optionnel) :') ?? undefined;
+    try {
+      await this.storageService.rejectTicket(ticket.id, reason);
+      this.success = 'Ticket rejeté.';
+      await this.loadData();
+    } catch {
+      this.error = 'Erreur lors du rejet du ticket.';
+    }
+  }
+
+  readonly Math = Math;
 }

@@ -54,6 +54,21 @@ export interface PointsBalance {
   updatedAt: string;
 }
 
+export type TicketStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'POINTS_GRANTED';
+
+export interface Ticket {
+  id: string;
+  clientId: string;
+  restaurantId: string;
+  ticketNumber: string;
+  amount: number;
+  purchaseDate: string;
+  photoUrl: string | null;
+  status: TicketStatus;
+  rejectionReason: string | null;
+  createdAt: string;
+}
+
 export interface AuthState {
   user: User | null;
   isAuthenticated: boolean;

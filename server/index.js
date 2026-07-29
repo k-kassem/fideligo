@@ -263,6 +263,22 @@ async function initDb() {
       created_at TEXT NOT NULL
     );
 
+    CREATE TABLE IF NOT EXISTS tickets (
+      id TEXT PRIMARY KEY,
+      client_id TEXT NOT NULL,
+      restaurant_id TEXT NOT NULL,
+      ticket_number TEXT NOT NULL,
+      amount REAL NOT NULL CHECK(amount > 0),
+      purchase_date TEXT NOT NULL,
+      photo_url TEXT,
+      status TEXT NOT NULL DEFAULT 'PENDING' CHECK(status IN ('PENDING','APPROVED','REJECTED','POINTS_GRANTED')),
+      rejection_reason TEXT,
+      created_at TEXT NOT NULL,
+      FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE,
+      FOREIGN KEY(restaurant_id) REFERENCES restaurants(id) ON DELETE CASCADE,
+      UNIQUE(ticket_number, restaurant_id)
+    );
+
     CREATE TABLE IF NOT EXISTS client_verification_codes (
       id TEXT PRIMARY KEY,
       user_id TEXT NOT NULL,
@@ -708,6 +724,96 @@ async function bootstrap() {
       await db.run('DELETE FROM users WHERE id = ?', [client.user_id]);
     }
     res.json({ ok: true });
+  }));
+
+  // ── Tickets ──────────────────────────────────────────────────────────
+  const mapTicket = (t) => t ? {
+    id: t.id,
+    clientId: t.client_id,
+    restaurantId: t.restaurant_id,
+    ticketNumber: t.ticket_number,
+    amount: t.amount,
+    purchaseDate: t.purchase_date,
+    photoUrl: t.photo_url ?? null,
+    status: t.status,
+    rejectionReason: t.rejection_reason ?? null,
+    createdAt: t.created_at
+  } : null;
+
+  app.post('/api/tickets', asyncHandler(async (req, res) => {
+    const { clientId, restaurantId, ticketNumber, amount, purchaseDate, photoUrl } = req.body;
+    if (!clientId || !restaurantId || !ticketNumber || !amount || !purchaseDate) {
+      return res.status(400).json({ error: 'Champs obligatoires manquants' });
+    }
+    const existing = await db.get(
+      'SELECT id FROM tickets WHERE ticket_number = ? AND restaurant_id = ? LIMIT 1',
+      [ticketNumber, restaurantId]
+    );
+    if (existing) {
+      return res.status(409).json({ error: 'Ce ticket a déjà été soumis pour ce restaurant' });
+    }
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await db.run(
+      'INSERT INTO tickets (id, client_id, restaurant_id, ticket_number, amount, purchase_date, photo_url, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, \'PENDING\', ?)',
+      [id, clientId, restaurantId, ticketNumber, amount, purchaseDate, photoUrl ?? null, now]
+    );
+    const ticket = await db.get('SELECT * FROM tickets WHERE id = ? LIMIT 1', [id]);
+    res.status(201).json(mapTicket(ticket));
+  }));
+
+  app.get('/api/tickets', asyncHandler(async (req, res) => {
+    const { clientId, restaurantId, status } = req.query;
+    let sql = 'SELECT * FROM tickets WHERE 1=1';
+    const params = [];
+    if (clientId) { sql += ' AND client_id = ?'; params.push(clientId); }
+    if (restaurantId) { sql += ' AND restaurant_id = ?'; params.push(restaurantId); }
+    if (status) { sql += ' AND status = ?'; params.push(status); }
+    sql += ' ORDER BY created_at DESC';
+    const rows = await db.all(sql, params);
+    res.json(rows.map(mapTicket));
+  }));
+
+  app.patch('/api/tickets/:id/approve', asyncHandler(async (req, res) => {
+    const ticket = await db.get('SELECT * FROM tickets WHERE id = ? LIMIT 1', [req.params.id]);
+    if (!ticket) return res.status(404).json({ error: 'Ticket introuvable' });
+    if (ticket.status !== 'PENDING') return res.status(400).json({ error: 'Ticket déjà traité' });
+    const restaurant = await db.get('SELECT * FROM restaurants WHERE id = ? LIMIT 1', [ticket.restaurant_id]);
+    const pointsEarned = Math.floor(ticket.amount * (restaurant?.points_per_euro ?? 1));
+    const purchaseId = crypto.randomUUID();
+    const now = new Date().toISOString();
+    await db.run(
+      'INSERT INTO purchases (id, client_id, restaurant_id, amount, points_earned, points_used, description, date) VALUES (?, ?, ?, ?, ?, 0, ?, ?)',
+      [purchaseId, ticket.client_id, ticket.restaurant_id, ticket.amount, pointsEarned, `Ticket #${ticket.ticket_number}`, ticket.purchase_date]
+    );
+    const balance = await db.get(
+      'SELECT * FROM points_balances WHERE client_id = ? AND restaurant_id = ? LIMIT 1',
+      [ticket.client_id, ticket.restaurant_id]
+    );
+    if (balance) {
+      await db.run(
+        'UPDATE points_balances SET points = points + ?, updated_at = ? WHERE client_id = ? AND restaurant_id = ?',
+        [pointsEarned, now, ticket.client_id, ticket.restaurant_id]
+      );
+    } else {
+      await db.run(
+        'INSERT INTO points_balances (client_id, restaurant_id, points, updated_at) VALUES (?, ?, ?, ?)',
+        [ticket.client_id, ticket.restaurant_id, pointsEarned, now]
+      );
+    }
+    await db.run('UPDATE tickets SET status = \'POINTS_GRANTED\' WHERE id = ?', [req.params.id]);
+    const updated = await db.get('SELECT * FROM tickets WHERE id = ? LIMIT 1', [req.params.id]);
+    res.json({ ticket: mapTicket(updated), pointsEarned });
+  }));
+
+  app.patch('/api/tickets/:id/reject', asyncHandler(async (req, res) => {
+    const ticket = await db.get('SELECT * FROM tickets WHERE id = ? LIMIT 1', [req.params.id]);
+    if (!ticket) return res.status(404).json({ error: 'Ticket introuvable' });
+    if (ticket.status !== 'PENDING') return res.status(400).json({ error: 'Ticket déjà traité' });
+    const { reason } = req.body;
+    await db.run('UPDATE tickets SET status = \'REJECTED\', rejection_reason = ? WHERE id = ?', [reason ?? null, req.params.id]);
+    const updated = await db.get('SELECT * FROM tickets WHERE id = ? LIMIT 1', [req.params.id]);
+    res.json(mapTicket(updated));
   }));
 
   app.get('/api/purchases', asyncHandler(async (req, res) => {
