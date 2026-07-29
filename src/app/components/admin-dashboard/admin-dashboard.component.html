@@ -450,6 +450,81 @@
   </div>
 
   <!-- Dialog -->
+  <!-- Client Dialog -->
+  <div *ngIf="clientDialogOpen" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
+    <div class="bg-white rounded-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
+      <div class="px-6 py-4 border-b">
+        <h3 class="text-lg font-medium text-gray-900">{{ editingClient ? 'Modifier le Client' : 'Créer un nouveau Client' }}</h3>
+        <p class="text-sm text-gray-500">{{ editingClient ? 'Modifiez les informations du client.' : 'Remplissez les informations pour créer un client.' }}</p>
+      </div>
+      <form (ngSubmit)="saveClient()" class="p-6 space-y-4">
+        <div>
+          <label for="firstName" class="block text-sm font-medium text-gray-700">Prénom *</label>
+          <input
+            id="firstName"
+            type="text"
+            [(ngModel)]="firstName"
+            name="firstName"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Jean"
+          />
+        </div>
+        <div>
+          <label for="lastName" class="block text-sm font-medium text-gray-700">Nom *</label>
+          <input
+            id="lastName"
+            type="text"
+            [(ngModel)]="lastName"
+            name="lastName"
+            required
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Dupont"
+          />
+        </div>
+        <div>
+          <label for="clientEmail" class="block text-sm font-medium text-gray-700">Email *</label>
+          <input
+            id="clientEmail"
+            type="email"
+            [ngModel]="editingClient?.email || ''"
+            disabled
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm bg-gray-100 cursor-not-allowed"
+          />
+          <p class="mt-1 text-sm text-gray-500">L'email ne peut pas être modifié</p>
+        </div>
+        <div>
+          <label for="clientRegion" class="block text-sm font-medium text-gray-700">Région</label>
+          <input
+            id="clientRegion"
+            type="text"
+            [(ngModel)]="region"
+            name="region"
+            class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+            placeholder="Île-de-France"
+          />
+        </div>
+        <div class="flex justify-end space-x-3 pt-4">
+          <button
+            type="button"
+            (click)="closeClientDialog()"
+            class="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
+          >
+            Annuler
+          </button>
+          <button
+            type="submit"
+            class="px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium"
+          >
+            {{ editingClient ? 'Modifier le Client' : 'Créer le Client' }}
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Dialog -->
+  <!-- Restaurant Dialog -->
   <div *ngIf="isDialogOpen" class="fixed inset-0 bg-gray-600 bg-opacity-50 flex items-center justify-center z-50">
     <div class="bg-white rounded-lg max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto">
       <div class="px-6 py-4 border-b">
