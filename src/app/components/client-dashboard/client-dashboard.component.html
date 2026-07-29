@@ -17,12 +17,12 @@
         <div class="flex items-center space-x-3">
           <button
             class="flex items-center space-x-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
-            (click)="openAddPurchaseModal()"
+            (click)="openTicketModal()"
           >
             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            <span>Nouvel Achat</span>
+            <span>Soumettre un ticket</span>
           </button>
           <button
             class="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
@@ -50,14 +50,14 @@
         <div class="hidden md:flex flex-col items-center">
           <button
             class="flex items-center space-x-2 px-5 py-3 bg-white text-orange-600 rounded-lg font-semibold hover:bg-orange-50 transition-colors shadow"
-            (click)="openAddPurchaseModal()"
+            (click)="openTicketModal()"
           >
             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
             </svg>
-            <span>Enregistrer un achat</span>
+            <span>Soumettre un ticket</span>
           </button>
-          <p class="text-xs text-orange-200 mt-2">Gagnez des points selon le barème défini par chaque restaurant</p>
+          <p class="text-xs text-orange-200 mt-2">Soumettez votre ticket de caisse pour gagner des points</p>
         </div>
       </div>
     </div>
@@ -180,7 +180,7 @@
                   </svg>
                   <p>Aucun point enregistré</p>
                   <p class="text-sm mt-1">
-                    <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
+                    <button class="text-orange-500 hover:underline font-medium" (click)="openTicketModal()">Soumettez votre premier ticket</button>
                     pour gagner des points !
                   </p>
                 </div>
@@ -236,12 +236,12 @@
                 </div>
                 <button
                   class="mt-6 w-full flex items-center justify-center space-x-2 px-4 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-medium transition-colors"
-                  (click)="openAddPurchaseModal()"
+                  (click)="openTicketModal()"
                 >
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                   </svg>
-                  <span>Enregistrer un achat</span>
+                  <span>Soumettre un ticket</span>
                 </button>
               </div>
             </div>
@@ -273,12 +273,12 @@
                 </div>
                 <button
                   class="flex items-center space-x-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-md text-sm font-medium transition-colors"
-                  (click)="openAddPurchaseModal()"
+                  (click)="openTicketModal()"
                 >
                   <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
                   </svg>
-                  <span>Nouvel achat</span>
+                  <span>Soumettre un ticket</span>
                 </button>
               </div>
             </div>
@@ -289,7 +289,7 @@
                 </svg>
                 <p>Aucun achat enregistré</p>
                 <p class="text-sm mt-2">
-                  <button class="text-orange-500 hover:underline font-medium" (click)="openAddPurchaseModal()">Enregistrez votre premier achat</button>
+                  <button class="text-orange-500 hover:underline font-medium" (click)="openTicketModal()">Soumettez votre premier ticket</button>
                 </p>
               </div>
               <div *ngIf="purchases.length > 0">
