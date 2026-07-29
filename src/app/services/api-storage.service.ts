@@ -5,6 +5,21 @@ import type { User, Restaurant, Client, Purchase, PointsBalance, Ticket, TicketS
 
 type PointsByRestaurant = { restaurant: Restaurant; points: number };
 type CreatePurchasePayload = Omit<Purchase, 'id' | 'date' | 'pointsEarned'> & { pointsEarned?: number; bonusPoints?: number };
+type RegisterClientPayload = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  region: string;
+  password: string;
+};
+
+type RegisterClientResponse = {
+  ok: boolean;
+  email: string;
+  message: string;
+  verificationCode?: string;
+};
 
 @Injectable({
   providedIn: 'root'
@@ -20,6 +35,18 @@ export class StorageService {
 
   async login(email: string, password: string): Promise<User> {
     return firstValueFrom(this.http.post<User>(`${this.apiBase}/login`, { email, password }));
+  }
+
+  async registerClient(payload: RegisterClientPayload): Promise<RegisterClientResponse> {
+    return firstValueFrom(this.http.post<RegisterClientResponse>(`${this.apiBase}/auth/register-client`, payload));
+  }
+
+  async verifyClientAccount(email: string, code: string): Promise<{ ok: boolean; message: string }> {
+    return firstValueFrom(this.http.post<{ ok: boolean; message: string }>(`${this.apiBase}/auth/verify-client`, { email, code }));
+  }
+
+  async resendClientVerificationCode(email: string): Promise<{ ok: boolean; message: string; verificationCode?: string }> {
+    return firstValueFrom(this.http.post<{ ok: boolean; message: string; verificationCode?: string }>(`${this.apiBase}/auth/resend-client-code`, { email }));
   }
 
   async getUsers(): Promise<User[]> {
@@ -111,6 +138,10 @@ export class StorageService {
   async updateClient(id: string, updates: Partial<Omit<Client, 'id' | 'createdAt'>>): Promise<Client | null> {
     const client = await firstValueFrom(this.http.patch<Client | null>(`${this.apiBase}/clients/${id}`, updates));
     return client ?? null;
+  }
+
+  async deleteClient(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete<{ ok: boolean }>(`${this.apiBase}/clients/${id}`));
   }
 
   async getPurchases(): Promise<Purchase[]> {

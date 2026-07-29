@@ -8,6 +8,7 @@ export interface User {
   password: string;
   role: UserRole;
   name: string;
+  isVerified?: boolean;
   createdAt: string;
 }
 
