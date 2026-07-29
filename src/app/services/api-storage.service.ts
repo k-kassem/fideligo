@@ -113,6 +113,10 @@ export class StorageService {
     return client ?? null;
   }
 
+  async deleteClient(id: string): Promise<void> {
+    await firstValueFrom(this.http.delete<{ ok: boolean }>(`${this.apiBase}/clients/${id}`));
+  }
+
   async getPurchases(): Promise<Purchase[]> {
     return firstValueFrom(this.http.get<Purchase[]>(`${this.apiBase}/purchases`));
   }

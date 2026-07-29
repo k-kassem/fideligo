@@ -37,10 +37,15 @@ export class AdminDashboardComponent implements OnInit {
   description = '';
   pointsPerEuro = 1;
   subscriptionEndDate = '';
+  firstName = '';
+  lastName = '';
+  region = '';
 
   // Edit mode
   isEditMode = false;
   editingRestaurant: Restaurant | null = null;
+  editingClient: Client | null = null;
+  clientDialogOpen = false;
 
   constructor(
     private authService: AuthService,
@@ -277,5 +282,82 @@ export class AdminDashboardComponent implements OnInit {
 
   async logout() {
     await this.authService.logout();
+  }
+
+  // Client management methods
+  openClientDialog() {
+    this.resetClientForm();
+    this.clientDialogOpen = true;
+  }
+
+  closeClientDialog() {
+    this.resetClientForm();
+    this.clientDialogOpen = false;
+  }
+
+  resetClientForm() {
+    this.firstName = '';
+    this.lastName = '';
+    this.email = '';
+    this.phone = '';
+    this.region = '';
+    this.password = '';
+    this.isEditMode = false;
+    this.editingClient = null;
+  }
+
+  startEditClient(client: Client) {
+    this.isEditMode = true;
+    this.editingClient = client;
+    this.firstName = client.firstName;
+    this.lastName = client.lastName;
+    this.email = client.email;
+    this.phone = client.phone || '';
+    this.region = client.region || '';
+    this.password = '';
+    this.clientDialogOpen = true;
+    this.error = '';
+    this.success = '';
+  }
+
+  async saveClient() {
+    if (!this.firstName.trim() || !this.lastName.trim() || !this.email.trim() || !this.phone.trim() || !this.region.trim()) {
+      this.error = 'Veuillez remplir tous les champs.';
+      return;
+    }
+
+    try {
+      if (this.isEditMode && this.editingClient) {
+        await this.storageService.updateClient(this.editingClient.id, {
+          firstName: this.firstName,
+          lastName: this.lastName,
+          email: this.email,
+          phone: this.phone,
+          region: this.region
+        });
+        this.success = 'Client modifié avec succès !';
+      } else {
+        this.error = 'Erreur : mode édition attendu';
+        return;
+      }
+
+      await this.loadClients();
+      this.resetClientForm();
+      this.clientDialogOpen = false;
+    } catch (err) {
+      this.error = this.isEditMode ? 'Erreur lors de la modification du client' : 'Erreur lors de la création du client';
+    }
+  }
+
+  async deleteClient(id: string) {
+    if (confirm('Êtes-vous sûr de vouloir supprimer ce client ? Cette action est irréversible.')) {
+      try {
+        await this.storageService.deleteClient(id);
+        await this.loadClients();
+        this.success = 'Client supprimé avec succès !';
+      } catch (err) {
+        this.error = 'Erreur lors de la suppression du client';
+      }
+    }
   }
 }

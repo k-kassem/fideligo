@@ -447,6 +447,11 @@ async function bootstrap() {
     res.json(mapClient(updated));
   }));
 
+  app.delete('/api/clients/:id', asyncHandler(async (req, res) => {
+    await db.run('DELETE FROM clients WHERE id = ?', [req.params.id]);
+    res.json({ ok: true });
+  }));
+
   app.get('/api/purchases', asyncHandler(async (req, res) => {
     const { clientId, restaurantId } = req.query;
     let sql = 'SELECT * FROM purchases';
